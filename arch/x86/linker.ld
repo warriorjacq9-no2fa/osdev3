@@ -8,6 +8,18 @@ SECTIONS
     .text : {
         *(.text.start)
         *(.text)
-        . = 0xFDFF;
+    }
+
+    .rodata : {
+        *(.rodata)
+    }
+
+    .data : {
+        *(.data)
+    }
+
+    .bss (NOLOAD) : {
+        *(COMMON)
+        *(.bss)
     }
 }

@@ -2,13 +2,11 @@
 # The BIOS image uses NASM for flat-binary and multi-bits simplicity
 .PHONY: kernel clean
 
-ROOT ?= ../..
-
 boot.img: boot.o kernel
-	cat boot.o $(ROOT)/kernel/kernel.bin > $@
+	cat boot.o $(ROOT)/arch/x86/kernel.bin > $@
 
 kernel:
-	$(MAKE) -C $(ROOT)/kernel kernel.bin
+	$(MAKE) -C $(ROOT)/arch/x86 kernel.bin ROOT=$(ROOT)
 
 %.o: %.asm
 	nasm $^ -fbin -o $@
