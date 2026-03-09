@@ -4,11 +4,12 @@
 static uint16_t* const VGA_MEM = (uint16_t*)0xB8000;
 
 static uint8_t vga_row = 0, vga_col = 0;
+static uint8_t vga_color = VGA_FG_GRAY | (VGA_BG_BLACK << 4);
 
 void vga_clear(uint8_t x, uint8_t y, uint8_t len) {
     for(int i = 0; i < len; i++)
         VGA_MEM[y * VGA_WIDTH + i + x] = 
-            ' ' | ((FGC_GRAY | BGC_BLACK) << 8);
+            ' ' | ((VGA_FG_GRAY | VGA_BG_BLACK) << 8);
 }
 
 void vga_scroll() {
@@ -34,7 +35,7 @@ static inline void vga_set_cursor(uint8_t x, uint8_t y) {
 	outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
 }
 
-void vga_putc(char c, uint8_t color) {
+void vga_putc(char c) {
     if(c == '\n') {
         vga_clear(vga_col, vga_row, VGA_WIDTH - vga_col);
         vga_row++;
@@ -46,7 +47,7 @@ void vga_putc(char c, uint8_t color) {
         vga_col += 8;
     }
     else
-        VGA_MEM[vga_row * VGA_WIDTH + vga_col] = c | (color << 8);
+        VGA_MEM[vga_row * VGA_WIDTH + vga_col] = c | (vga_color << 8);
     
     if(++vga_col >= VGA_WIDTH) {
         vga_col = 0;
@@ -58,9 +59,13 @@ void vga_putc(char c, uint8_t color) {
     vga_set_cursor(vga_col, vga_row);
 }
 
-void vga_puts(const char* s, uint8_t color) {
+void vga_puts(const char* s) {
     while(*s) {
-        vga_putc(*s, color);
+        vga_putc(*s);
         s++;
     }
+}
+
+void vga_setcolor(uint8_t fg, uint8_t bg) {
+    vga_color = fg | (bg << 4);
 }

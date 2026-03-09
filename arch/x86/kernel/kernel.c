@@ -1,5 +1,7 @@
 #include <drivers/vga.h>
+#include <drivers/serial.h>
 
 void kmain() {
-    vga_puts("Hello world!", FGC_GRAY | BGC_BLACK);
+    vga_puts("Hello world!");
+    serial_puts("Hello world!");
 }

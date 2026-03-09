@@ -7,6 +7,7 @@
 
 typedef void (*s_callback_t)(uint8_t);
 
-
+void serial_putc(char c);
+void serial_puts(const char* s);
 
 #endif

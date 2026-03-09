@@ -16,11 +16,14 @@ OBJS = \
 boot.o \
 io.o \
 drivers/vga.o \
+drivers/serial.o \
 kernel/kernel.o
 
 HEADERS = \
+$(ROOT)/include/ansi.h \
 include/io.h \
-include/drivers/vga.h
+include/drivers/vga.h \
+include/drivers/serial.h
 
 .PHONY: clean
 
