@@ -1,6 +1,6 @@
 CC ?= gcc
 CFLAGS ?= \
--I$(ROOT)/include \
+-I$(ROOT)/arch/x86/include \
 -ffreestanding -fno-stack-protector \
 -fno-pic \
 -O2 -march=i386 -m32 \
@@ -14,11 +14,13 @@ LDFLAGS ?= -nostdlib -no-pie
 
 OBJS = \
 boot.o \
+io.o \
 drivers/vga.o \
 kernel/kernel.o
 
 HEADERS = \
-$(ROOT)/include/drivers/vga.h
+include/io.h \
+include/drivers/vga.h
 
 .PHONY: clean
 

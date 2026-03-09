@@ -13,6 +13,10 @@ _start:
     ;==========================
     mov ax, 0x0003 ; 80x25
     int 0x10
+    ; Enable cursor
+    mov ax, 0x0100
+    mov cx, 0x0607
+    int 0x10
 
     ; Set up stack
     mov sp, 0xFF00

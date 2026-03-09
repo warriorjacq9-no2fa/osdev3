@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-#define WIDTH 80
-#define HEIGHT 25
+#define VGA_WIDTH 80
+#define VGA_HEIGHT 25
 
 enum fg_color {
     FGC_BLACK,
@@ -30,7 +30,7 @@ enum bg_color {
     BGC_LIGHT = 0x80
 };
 
-void putc(char c, uint8_t color);
-void puts(const char* s, uint8_t color);
+void vga_putc(char c, uint8_t color);
+void vga_puts(const char* s, uint8_t color);
 
 #endif

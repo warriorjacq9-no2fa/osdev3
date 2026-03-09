@@ -3,7 +3,7 @@
 ROOT = $(CURDIR)
 
 all: os.img kernel.dump
-	qemu-system-i386 -hda $<
+	qemu-system-i386 -hda $< -display curses
 
 os.img: bios
 	cp boot/bios/boot.img $@
