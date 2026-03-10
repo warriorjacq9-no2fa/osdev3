@@ -1,6 +1,7 @@
 #include <kernel/klog.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdio.h>
 
 void klog(char level, const char *namespace, const char* s) {
     char prefix[32];

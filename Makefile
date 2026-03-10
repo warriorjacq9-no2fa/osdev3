@@ -10,8 +10,7 @@ CFLAGS ?= \
 AS ?= as
 AFLAGS ?= --32 -march=i386
 
-LD ?= ld
-LDFLAGS ?= -nostdlib -no-pie
+LDFLAGS ?= -nostdlib -no-pie -lgcc
 
 OBJS = \
 arch/x86/boot.o \
@@ -20,7 +19,12 @@ drivers/serial.o \
 drivers/vga.o \
 kernel/kernel.o \
 kernel/klog.o \
+lib/stdio/printf.o \
+lib/stdio/putc.o \
+lib/stdio/puts.o \
+lib/string/memset.o \
 lib/string/strcat.o \
+lib/string/strcpy.o \
 lib/string/strlen.o \
 
 HEADERS = \
@@ -28,6 +32,7 @@ include/drivers/serial.h \
 include/drivers/vga.h \
 include/kernel/klog.h \
 include/ansi.h \
+include/stdio.h \
 include/string.h
 
 BIOS_OBJS = \
@@ -39,7 +44,7 @@ os.img: $(BIOS_OBJS) kernel.bin
 	cat $^ > $@
 
 kernel.bin: arch/x86/linker.ld $(OBJS)
-	$(LD) $(LDFLAGS) -T $^ -o $@
+	$(CC) $(LDFLAGS) -T $^ -o $@
 	truncate -s 32K $@
 
 test: os.img kernel.dump
