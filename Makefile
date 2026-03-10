@@ -15,6 +15,8 @@ LIBS ?= -lgcc
 
 OBJS = \
 arch/x86/boot.o \
+arch/x86/arch.o \
+arch/x86/interrupts.o \
 arch/x86/io.o \
 drivers/serial.o \
 drivers/vga.o \
@@ -23,12 +25,17 @@ kernel/klog.o \
 lib/stdio/printf.o \
 lib/stdio/putc.o \
 lib/stdio/puts.o \
+lib/string/memmove.o \
 lib/string/memset.o \
 lib/string/strcat.o \
 lib/string/strcpy.o \
 lib/string/strlen.o \
 
 HEADERS = \
+arch/x86/include/arch.h \
+arch/x86/include/io.h \
+arch/x86/include/stddef.h \
+arch/x86/interrupts.h \
 include/drivers/serial.h \
 include/drivers/vga.h \
 include/kernel/klog.h \
@@ -49,7 +56,10 @@ kernel.bin: arch/x86/linker.ld $(OBJS)
 	truncate -s 32K $@
 
 test: os.img kernel.dump
-	qemu-system-i386 -hda $< -display curses
+	qemu-system-i386 -D qemu.log -d int \
+		--no-reboot --no-shutdown \
+		-hda $< \
+		-nographic -serial pty
 
 kernel.dump: os.img
 	objdump -b binary -mi8086 --adjust-vma=0x7C00 -D $(BIOS_OBJS) > $@
