@@ -37,7 +37,6 @@ static inline void vga_set_cursor(uint8_t x, uint8_t y) {
 
 void vga_putc(char c) {
     if(c == '\n') {
-        vga_clear(vga_col, vga_row, VGA_WIDTH - vga_col);
         vga_row++;
         vga_col = 0;
     } else if(c == '\r') {
@@ -45,15 +44,16 @@ void vga_putc(char c) {
     } else if(c == '\t') {
         vga_clear(vga_col, vga_row, 8);
         vga_col += 8;
-    }
-    else
+        if(vga_col >= VGA_WIDTH) vga_col = VGA_WIDTH - 1;
+    } else {
         VGA_MEM[vga_row * VGA_WIDTH + vga_col] = c | (vga_color << 8);
     
-    if(++vga_col >= VGA_WIDTH) {
-        vga_col = 0;
-        if(++vga_row >= VGA_HEIGHT) {
-            vga_row = VGA_HEIGHT - 1;
-            vga_scroll();
+        if(++vga_col >= VGA_WIDTH) {
+            vga_col = 0;
+            if(++vga_row >= VGA_HEIGHT) {
+                vga_row = VGA_HEIGHT - 1;
+                vga_scroll();
+            }
         }
     }
     vga_set_cursor(vga_col, vga_row);

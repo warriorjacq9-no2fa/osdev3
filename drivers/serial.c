@@ -1,10 +1,7 @@
 #include <drivers/serial.h>
 #include <io.h>
 
-static s_callback_t callback;
-
-void serial_init(s_callback_t cb) {
-    callback = cb;
+void serial_init() {
     outb(COM1+3, 0b10000111); // 8N1, DLAB
     outb(COM1+1, 0); // Divisor MSB: 0
     outb(COM1, 1); // Divisor LSB: 1

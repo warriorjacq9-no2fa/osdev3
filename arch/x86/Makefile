@@ -15,6 +15,7 @@ LDFLAGS ?= -nostdlib -no-pie
 OBJS = \
 boot.o \
 io.o \
+$(ROOT)/kernel/log.o \
 drivers/vga.o \
 drivers/serial.o \
 kernel/kernel.o
