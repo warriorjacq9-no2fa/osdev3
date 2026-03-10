@@ -1,3 +1,4 @@
+#include <string.h>
 #include <drivers/vga.h>
 #include <io.h>
 
@@ -13,14 +14,17 @@ void vga_clear(uint8_t x, uint8_t y, uint8_t len) {
 }
 
 void vga_scroll() {
-    int len = 2 * ((VGA_HEIGHT - 1) * VGA_WIDTH);
+    memmove(
+        &VGA_MEM[0],
+        &VGA_MEM[VGA_WIDTH],
+        (VGA_HEIGHT - 1) * VGA_WIDTH * sizeof(uint16_t)
+    );
 
-    // Memmove inline
-    char *d = (char*)VGA_MEM;
-    const char *s = (const char*)(VGA_MEM + VGA_WIDTH);
-    while(len--) *d++ = *s++;
-
-    vga_clear(0, VGA_HEIGHT - 1, VGA_WIDTH);
+    memset(
+        &VGA_MEM[(VGA_HEIGHT - 1) * VGA_WIDTH],
+        0,
+        VGA_WIDTH * sizeof(uint16_t)
+    );
 }
 
 static inline void vga_set_cursor(uint8_t x, uint8_t y) {
@@ -37,15 +41,18 @@ static inline void vga_set_cursor(uint8_t x, uint8_t y) {
 
 void vga_putc(char c) {
     if(c == '\n') {
-        vga_row++;
         vga_col = 0;
+        if(++vga_row >= VGA_HEIGHT) {
+            vga_row = VGA_HEIGHT - 1;
+            vga_scroll();
+        }
     } else if(c == '\r') {
         vga_col = 0;
     } else if(c == '\t') {
         vga_clear(vga_col, vga_row, 8);
         vga_col += 8;
         if(vga_col >= VGA_WIDTH) vga_col = VGA_WIDTH - 1;
-    } else {
+    } else if(c) {
         VGA_MEM[vga_row * VGA_WIDTH + vga_col] = c | (vga_color << 8);
     
         if(++vga_col >= VGA_WIDTH) {
