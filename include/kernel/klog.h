@@ -7,6 +7,7 @@ enum klog_level {
     LOG_ERR
 };
 
-void klog(char level, const char *namespace, const char* s);
+void klog(char level, const char* namespace, const char* s);
+void kprintf(char level, const char* namespace, const char* fmt, ...);
 
 #endif

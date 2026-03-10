@@ -1,4 +1,4 @@
-CC ?= gcc
+CC = i386-elf-gcc
 CFLAGS ?= \
 -Iinclude \
 -Iarch/x86/include \
@@ -7,10 +7,11 @@ CFLAGS ?= \
 -O2 -march=i386 -m32 \
 -Wall -Werror
 
-AS ?= as
+AS = i386-elf-as
 AFLAGS ?= --32 -march=i386
 
-LDFLAGS ?= -nostdlib -no-pie -lgcc
+LDFLAGS ?= -nostdlib -no-pie
+LIBS ?= -lgcc
 
 OBJS = \
 arch/x86/boot.o \
@@ -44,11 +45,11 @@ os.img: $(BIOS_OBJS) kernel.bin
 	cat $^ > $@
 
 kernel.bin: arch/x86/linker.ld $(OBJS)
-	$(CC) $(LDFLAGS) -T $^ -o $@
+	$(CC) $(LDFLAGS) -T $^ $(LIBS) -o $@
 	truncate -s 32K $@
 
 test: os.img kernel.dump
-	qemu-system-i386 -hda $<
+	qemu-system-i386 -hda $< -display curses
 
 kernel.dump: os.img
 	objdump -b binary -mi8086 --adjust-vma=0x7C00 -D $(BIOS_OBJS) > $@
