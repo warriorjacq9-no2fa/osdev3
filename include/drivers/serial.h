@@ -7,6 +7,6 @@
 
 void serial_putc(char c);
 void serial_puts(const char* s);
-void serial_setcolor(const char* ansi);
+void serial_setcolor(uint8_t fg, uint8_t bg);
 
 #endif

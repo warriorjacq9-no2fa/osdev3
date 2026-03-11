@@ -1,6 +1,8 @@
 #include <string.h>
-#include <drivers/serial.h>
+#include <stdio.h>
+#include <ansi.h>
 #include <io.h>
+#include <drivers/serial.h>
 
 void serial_init() {
     outb(COM1 + 1, 0x00); // Disable interrupts
@@ -26,22 +28,9 @@ void serial_puts(const char* s) {
     }
 }
 
-void serial_setcolor(const char* fg, const char* bg) {
-    char ansi_buf[32] = 0;
-    const char* ansi = ansi_buf;
+void serial_setcolor(uint8_t fg, uint8_t bg) {
+    char ansi_buf[32];
 
-    size_t len = strlen(fg);
-
-    strcpy(ansi, fg);
-    ansi += len;
-
-    len = strlen(bg);
-
-    strcpy(ansi, bg);
-    ansi += len;
-
-    while(*ansi) {
-        outb(COM1, *ansi);
-        ansi++;
-    }
+    sprintf(ansi_buf, ANSI_SGR, fg, bg);
+    serial_puts(ansi_buf);
 }

@@ -5,12 +5,12 @@
 static uint16_t* const VGA_MEM = (uint16_t*)0xB8000;
 
 static uint8_t vga_row = 0, vga_col = 0;
-static uint8_t vga_color = VGA_FG_GRAY | (VGA_BG_BLACK << 4);
+static uint8_t vga_color = FG_GRAY | (BG_BLACK << 4);
 
 void vga_clear(uint8_t x, uint8_t y, uint8_t len) {
     for(int i = 0; i < len; i++)
         VGA_MEM[y * VGA_WIDTH + i + x] = 
-            ' ' | ((VGA_FG_GRAY | VGA_BG_BLACK) << 8);
+            ' ' | ((FG_GRAY | BG_BLACK) << 8);
 }
 
 void vga_scroll() {

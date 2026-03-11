@@ -17,6 +17,7 @@ char* klog_prefix(char level, const char* namespace) {
 
     switch(level) {
         case LOG_INFO:
+            setcolor(FG_GRAY, FG_BLACK);
             *p++ = 'I';
             *p++ = 'N';
             *p++ = 'F';
@@ -24,6 +25,7 @@ char* klog_prefix(char level, const char* namespace) {
             break;
         
         case LOG_WARN:
+            setcolor(FG_YELLOW, FG_BLACK);
             *p++ = 'W';
             *p++ = 'A';
             *p++ = 'R';
@@ -31,6 +33,7 @@ char* klog_prefix(char level, const char* namespace) {
             break;
 
         case LOG_ERR:
+            setcolor(FG_RED, FG_BLACK);
             *p++ = ' ';
             *p++ = 'E';
             *p++ = 'R';
