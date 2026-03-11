@@ -24,6 +24,7 @@ drivers/vga.o \
 kernel/kernel.o \
 kernel/kinput.o \
 kernel/klog.o \
+lib/ringbuffer/ringbuffer.o \
 lib/stdio/printf.o \
 lib/stdio/putc.o \
 lib/stdio/puts.o \
