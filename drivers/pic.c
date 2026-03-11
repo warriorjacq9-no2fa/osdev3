@@ -17,7 +17,7 @@ void pic_remap(uint8_t vec1, uint8_t vec2) {
 
     outb(0x21, 0x01); // ICW4: set optional features (8086 mode)
 	iowait();
-	outb(0x21, 0x01);
+	outb(0xA1, 0x01);
 	iowait();
 }
 

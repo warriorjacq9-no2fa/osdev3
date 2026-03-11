@@ -37,9 +37,9 @@ void serial_setcolor(uint8_t fg, uint8_t bg) {
 }
 
 void serial_irq() {
-    uint8_t iir = inb(COM1 + 2);
+    uint8_t isr = inb(COM1 + 2);
 
-    if (!(iir & 1)) { // interrupt pending
+    if (!(isr & 1)) { // interrupt pending
         uint8_t data = inb(COM1 + 0); // READ DATA
         putc(data);
     }
