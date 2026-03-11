@@ -65,7 +65,7 @@ test: os.img kernel.dump
 	qemu-system-i386 -D qemu.log -d int \
 		--no-reboot --no-shutdown \
 		-hda $< \
-		-display curses
+		-serial mon:stdio -nographic
 
 kernel.dump: os.img
 	objdump -b binary -mi8086 --adjust-vma=0x7C00 -D $(BIOS_OBJS) > $@

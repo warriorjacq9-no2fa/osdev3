@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <kernel/klog.h>
 #include <drivers/pic.h>
+#include <drivers/serial.h>
 #include <io.h>
 
 #define GT_TASK     0x5
@@ -59,8 +60,12 @@ void isr_init() {
 void exception_handler(iframe_t iframe) {
     if(iframe.vector > 31) {
         switch(iframe.vector - 32) {
-            case 0: // Timer IRQ
-                putc('t');
+            case 1: // Keyboard IRQ
+                // TODO: keyboard driver
+                inb(0x60);
+                break;
+            case 4: // COM1
+                serial_irq();
                 break;
         }
         pic_eoi(iframe.vector - 32);

@@ -14,6 +14,7 @@ void serial_init() {
     outb(COM1 + 3, 0x03); // 8 bits, no parity, one stop bit
     outb(COM1 + 2, 0xC7); // Enable FIFO, clear, 14-byte threshold
     outb(COM1 + 4, 0x0B); // IRQs enabled, RTS/DSR set
+    outb(COM1 + 1, 0x01); // Enable RX IRQ
 }
 
 void serial_putc(char c) {
@@ -33,4 +34,13 @@ void serial_setcolor(uint8_t fg, uint8_t bg) {
 
     sprintf(ansi_buf, ANSI_SGR, fg, bg);
     serial_puts(ansi_buf);
+}
+
+void serial_irq() {
+    uint8_t iir = inb(COM1 + 2);
+
+    if (!(iir & 1)) { // interrupt pending
+        uint8_t data = inb(COM1 + 0); // READ DATA
+        putc(data);
+    }
 }
