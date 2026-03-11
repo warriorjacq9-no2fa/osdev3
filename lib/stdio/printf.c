@@ -5,20 +5,12 @@
 #include <string.h>
 #include <stdint.h>
 
-/* ============================================================
-   Utility
-   ============================================================ */
-
 int isdigit(char c)
 {
     return (c >= '0' && c <= '9');
 }
 
-/* ============================================================
-   Integer formatting (mostly your original function)
-   ============================================================ */
-
-char* __int_str(intmax_t i, char b[], int base, bool plusSignIfNeeded,
+char *__int_str(intmax_t i, char b[], int base, bool plusSignIfNeeded,
                 bool spaceSignIfNeeded, int paddingNo,
                 bool justify, bool zeroPad)
 {
@@ -27,45 +19,56 @@ char* __int_str(intmax_t i, char b[], int base, bool plusSignIfNeeded,
 
     if (base == 16)
         strcat(digit, "ABCDEF");
-    else if (base == 17) {
+    else if (base == 17)
+    {
         strcat(digit, "abcdef");
         base = 16;
     }
 
-    char* p = b;
+    char *p = b;
 
-    if (i < 0) {
+    if (i < 0)
+    {
         *p++ = '-';
         i *= -1;
-    } else if (plusSignIfNeeded) {
+    }
+    else if (plusSignIfNeeded)
+    {
         *p++ = '+';
-    } else if (spaceSignIfNeeded) {
+    }
+    else if (spaceSignIfNeeded)
+    {
         *p++ = ' ';
     }
 
     intmax_t shifter = i;
 
-    do {
+    do
+    {
         ++p;
         shifter /= base;
     } while (shifter);
 
     *p = '\0';
 
-    do {
+    do
+    {
         *--p = digit[i % base];
         i /= base;
     } while (i);
 
     int padding = paddingNo - strlen(b);
-    if (padding < 0) padding = 0;
+    if (padding < 0)
+        padding = 0;
 
-    if (justify) {
+    if (justify)
+    {
 
         while (padding--)
             b[strlen(b)] = zeroPad ? '0' : ' ';
-
-    } else {
+    }
+    else
+    {
 
         char a[256] = {0};
 
@@ -78,10 +81,6 @@ char* __int_str(intmax_t i, char b[], int base, bool plusSignIfNeeded,
 
     return b;
 }
-
-/* ============================================================
-   Generic Output Interface
-   ============================================================ */
 
 typedef void (*out_f)(char c, void *ctx);
 
@@ -97,18 +96,16 @@ static void out_string(out_f out, void *ctx, const char *s, int *count)
         out_char(out, ctx, *s++, count);
 }
 
-/* ============================================================
-   Core formatting engine
-   ============================================================ */
-
 int vformat(out_f out, void *ctx, const char *format, va_list list)
 {
     int chars = 0;
     char intStrBuffer[256];
 
-    for (int i = 0; format[i]; i++) {
+    for (int i = 0; format[i]; i++)
+    {
 
-        if (format[i] != '%') {
+        if (format[i] != '%')
+        {
             out_char(out, ctx, format[i], &chars);
             continue;
         }
@@ -127,67 +124,86 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
         char length = 0;
         char specifier;
 
-        /* flags */
-
         bool parsing = true;
 
-        while (parsing) {
+        while (parsing)
+        {
 
-            switch (format[i]) {
+            switch (format[i])
+            {
 
-                case '-': leftJustify = true; i++; break;
-                case '+': plusSign = true; i++; break;
-                case '#': altForm = true; i++; break;
-                case ' ': spaceNoSign = true; i++; break;
-                case '0': zeroPad = true; i++; break;
+            case '-':
+                leftJustify = true;
+                i++;
+                break;
+            case '+':
+                plusSign = true;
+                i++;
+                break;
+            case '#':
+                altForm = true;
+                i++;
+                break;
+            case ' ':
+                spaceNoSign = true;
+                i++;
+                break;
+            case '0':
+                zeroPad = true;
+                i++;
+                break;
 
-                default: parsing = false; break;
+            default:
+                parsing = false;
+                break;
             }
         }
 
-        /* width */
-
-        while (isdigit(format[i])) {
+        while (isdigit(format[i]))
+        {
             width = width * 10 + (format[i] - '0');
             i++;
         }
 
-        if (format[i] == '*') {
+        if (format[i] == '*')
+        {
             width = va_arg(list, int);
             i++;
         }
 
-        /* precision */
-
-        if (format[i] == '.') {
+        if (format[i] == '.')
+        {
 
             i++;
             precision = 0;
 
-            while (isdigit(format[i])) {
+            while (isdigit(format[i]))
+            {
                 precision = precision * 10 + (format[i] - '0');
                 i++;
             }
 
-            if (format[i] == '*') {
+            if (format[i] == '*')
+            {
                 precision = va_arg(list, int);
                 i++;
             }
         }
 
-        /* length */
-
-        if (strchr("hljztL", format[i])) {
+        if (strchr("hljztL", format[i]))
+        {
 
             length = format[i];
             i++;
 
-            if (length == 'h' && format[i] == 'h') {
+            if (length == 'h' && format[i] == 'h')
+            {
                 length = 'H';
                 i++;
             }
 
-            if (length == 'l' && format[i] == 'l') {
+            if (length == 'l' && format[i] == 'l')
+            {
                 length = 'q';
                 i++;
             }
@@ -199,7 +215,8 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
 
         int base = 10;
 
-        if (specifier == 'o') {
+        if (specifier == 'o')
+        {
             base = 8;
             specifier = 'u';
 
@@ -207,7 +224,8 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
                 out_string(out, ctx, "0", &chars);
         }
 
-        if (specifier == 'p') {
+        if (specifier == 'p')
+        {
 
             base = 16;
             specifier = 'u';
@@ -216,27 +234,40 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
             out_string(out, ctx, "0x", &chars);
         }
 
-        /* ======================================================
-           Integer formatting
-           ====================================================== */
-
         if (specifier == 'd' || specifier == 'i' ||
             specifier == 'u' || specifier == 'x' || specifier == 'X')
         {
-            if (specifier == 'x') base = 17;
-            if (specifier == 'X') base = 16;
+            if (specifier == 'x')
+                base = 17;
+            if (specifier == 'X')
+                base = 16;
 
             uintmax_t val = 0;
 
-            switch (length) {
+            switch (length)
+            {
 
-                case 'H': val = (unsigned char)va_arg(list, int); break;
-                case 'h': val = (unsigned short)va_arg(list, int); break;
-                case 'l': val = va_arg(list, unsigned long); break;
-                case 'q': val = va_arg(list, unsigned long long); break;
-                case 'j': val = va_arg(list, uintmax_t); break;
-                case 'z': val = va_arg(list, size_t); break;
-                default:  val = va_arg(list, unsigned int); break;
+            case 'H':
+                val = (unsigned char)va_arg(list, int);
+                break;
+            case 'h':
+                val = (unsigned short)va_arg(list, int);
+                break;
+            case 'l':
+                val = va_arg(list, unsigned long);
+                break;
+            case 'q':
+                val = va_arg(list, unsigned long long);
+                break;
+            case 'j':
+                val = va_arg(list, uintmax_t);
+                break;
+            case 'z':
+                val = va_arg(list, size_t);
+                break;
+            default:
+                val = va_arg(list, unsigned int);
+                break;
             }
 
             if (specifier == 'd' || specifier == 'i')
@@ -254,7 +285,8 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
 
         /* char */
 
-        if (specifier == 'c') {
+        if (specifier == 'c')
+        {
 
             char c = (char)va_arg(list, int);
             out_char(out, ctx, c, &chars);
@@ -263,10 +295,12 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
 
         /* string */
 
-        if (specifier == 's') {
+        if (specifier == 's')
+        {
 
-            char *s = va_arg(list, char*);
-            if (!s) s = "(null)";
+            char *s = va_arg(list, char *);
+            if (!s)
+                s = "(null)";
 
             if (precision)
                 s[precision] = '\0';
@@ -277,7 +311,8 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
 
         /* % */
 
-        if (specifier == '%') {
+        if (specifier == '%')
+        {
 
             out_char(out, ctx, '%', &chars);
             continue;
@@ -287,19 +322,11 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
     return chars;
 }
 
-/* ============================================================
-   stdout output
-   ============================================================ */
-
 void stdout_out(char c, void *ctx)
 {
     (void)ctx;
     putc(c);
 }
-
-/* ============================================================
-   buffer output (sprintf)
-   ============================================================ */
 
 typedef struct
 {
@@ -313,10 +340,6 @@ void buffer_out(char c, void *ctx)
     buffer_ctx *b = ctx;
     b->buf[b->pos++] = c;
 }
-
-/* ============================================================
-   Public API
-   ============================================================ */
 
 int vprintf(const char *format, va_list list)
 {
@@ -336,7 +359,7 @@ int printf(const char *format, ...)
 
 int vsprintf(char *str, const char *format, va_list list)
 {
-    buffer_ctx ctx = { str, 0 };
+    buffer_ctx ctx = {str, 0};
 
     int r = vformat(buffer_out, &ctx, format, list);
 
