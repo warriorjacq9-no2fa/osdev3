@@ -51,6 +51,7 @@ char* klog_prefix(char level, const char* namespace) {
 void klog(char level, const char* namespace, const char* s) {
     puts(klog_prefix(level, namespace));
     puts(s);
+    setcolor(FG_GRAY, BG_BLACK);
 }
 
 void kprintf(char level, const char* namespace, const char* fmt, ...) {
@@ -59,4 +60,5 @@ void kprintf(char level, const char* namespace, const char* fmt, ...) {
     va_start(args, fmt);
     vprintf(fmt, args);
     va_end(args);
+    setcolor(FG_GRAY, BG_BLACK);
 }

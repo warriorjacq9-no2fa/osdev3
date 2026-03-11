@@ -25,6 +25,13 @@ _isr\number:
     jmp isr_no_err_stub
 .endm
 
+.macro irq number
+_isr\number:
+    push $0
+    push $\number
+    jmp isr_no_err_stub
+.endm
+
 .macro isr_res number
 _isr\number:
     hlt
@@ -64,6 +71,22 @@ isr_no_err  28
 isr_no_err  29
 isr_err     30
 isr_res     31
+irq         32
+irq         33
+irq         34
+irq         35
+irq         36
+irq         37
+irq         38
+irq         39
+irq         40
+irq         41
+irq         42
+irq         43
+irq         44
+irq         45
+irq         46
+irq         47
 
 isr_err_stub:
     cli
@@ -82,6 +105,7 @@ isr_no_err_stub:
     iret
 
 .extern kmain
+.extern irq_handler
 
 .section .data
 .macro isr_label number
@@ -92,7 +116,7 @@ isr_no_err_stub:
 .global isr_stubs
 isr_stubs:
 .set i,0
-.rept 32
+.rept 48
     isr_label %i
     .set i, i+1
 .endr

@@ -18,9 +18,11 @@ arch/x86/boot.o \
 arch/x86/arch.o \
 arch/x86/interrupts.o \
 arch/x86/io.o \
+drivers/pic.o \
 drivers/serial.o \
 drivers/vga.o \
 kernel/kernel.o \
+kernel/kinput.o \
 kernel/klog.o \
 lib/stdio/printf.o \
 lib/stdio/putc.o \
@@ -38,8 +40,10 @@ arch/x86/include/arch.h \
 arch/x86/include/io.h \
 arch/x86/include/stddef.h \
 arch/x86/interrupts.h \
+include/drivers/pic.h \
 include/drivers/serial.h \
 include/drivers/vga.h \
+include/kernel/kinput.h \
 include/kernel/klog.h \
 include/ansi.h \
 include/stdio.h \

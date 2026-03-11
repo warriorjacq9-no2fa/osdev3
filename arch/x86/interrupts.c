@@ -1,5 +1,7 @@
 #include <stdint.h>
+#include <stdio.h>
 #include <kernel/klog.h>
+#include <drivers/pic.h>
 #include <io.h>
 
 #define GT_TASK     0x5
@@ -30,10 +32,10 @@ typedef struct idtr {
     uint32_t base;
 } __attribute__((packed)) idtr_t;
 
-static idt_entry_t idt[32];
+static idt_entry_t idt[48];
 static idtr_t idt_r;
 
-extern uint32_t isr_stubs[32];
+extern uint32_t isr_stubs[48];
 
 void idt_add(uint8_t i, uint32_t isr, uint8_t flags) {
     idt[i].flags = flags | 0x80;
@@ -44,22 +46,26 @@ void idt_add(uint8_t i, uint32_t isr, uint8_t flags) {
 }
 
 void isr_init() {
-    for(int i = 0; i < 32; i++) {
+    for(int i = 0; i < 48; i++) {
         idt_add(i, isr_stubs[i], GT_INT32);
     }
-    // TODO: PIC driver
-    outb(0x21, 0xFF);
-    outb(0xA1, 0xFF);
-
     idt_r.base = (uint32_t)&idt[0];
     idt_r.limit = sizeof(idt) - 1;
 
     asm volatile("lidt %0" : : "m" (idt_r) : "memory");
-    asm volatile("sti");
     kprintf(LOG_INFO, "x86", "Loaded IDT at base %08x, limit %04x\r\n", idt_r.base, idt_r.limit);
 }
 
 void exception_handler(iframe_t iframe) {
-    kprintf(LOG_ERR, "x86", "Recieved exception %d\r\n", iframe.vector);
-    asm volatile("hlt");
+    if(iframe.vector > 31) {
+        switch(iframe.vector - 32) {
+            case 0: // Timer IRQ
+                putc('t');
+                break;
+        }
+        pic_eoi(iframe.vector - 32);
+    } else {
+        kprintf(LOG_ERR, "x86", "Recieved exception %d\r\n", iframe.vector);
+        asm volatile("hlt");
+    }
 }

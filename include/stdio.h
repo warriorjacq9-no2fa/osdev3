@@ -2,6 +2,7 @@
 #define STDIO_H
 
 #include <stdarg.h>
+#include <stdint.h>
 
 enum fg_color {
     FG_BLACK,
