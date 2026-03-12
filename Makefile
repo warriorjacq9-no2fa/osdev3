@@ -19,6 +19,7 @@ arch/x86/arch.o \
 arch/x86/interrupts.o \
 arch/x86/io.o \
 drivers/pic.o \
+drivers/ps2.o \
 drivers/serial.o \
 drivers/vga.o \
 kernel/kernel.o \
@@ -42,6 +43,7 @@ arch/x86/include/io.h \
 arch/x86/include/stddef.h \
 arch/x86/interrupts.h \
 include/drivers/pic.h \
+include/drivers/ps2.h \
 include/drivers/serial.h \
 include/drivers/vga.h \
 include/kernel/kinput.h \
@@ -66,7 +68,7 @@ test: os.img kernel.dump
 	qemu-system-i386 -D qemu.log -d int \
 		--no-reboot --no-shutdown \
 		-hda $< \
-		-serial mon:stdio -nographic
+		-display curses
 
 kernel.dump: os.img
 	objdump -b binary -mi8086 --adjust-vma=0x7C00 -D $(BIOS_OBJS) > $@

@@ -3,6 +3,7 @@
 #include <kernel/klog.h>
 #include <drivers/pic.h>
 #include <drivers/serial.h>
+#include <drivers/ps2.h>
 #include <io.h>
 
 #define GT_TASK     0x5
@@ -61,8 +62,7 @@ void exception_handler(iframe_t iframe) {
     if(iframe.vector > 31) {
         switch(iframe.vector - 32) {
             case 1: // Keyboard IRQ
-                // TODO: keyboard driver
-                inb(0x60);
+                ps2_irq();
                 break;
             case 4: // COM1
                 serial_irq();

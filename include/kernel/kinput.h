@@ -23,6 +23,7 @@ enum kinput_control {
     KI_F11,
     KI_F12,
     KI_WIN,
+    KI_ESC,
     KI_UP,
     KI_LEFT,
     KI_RIGHT,
