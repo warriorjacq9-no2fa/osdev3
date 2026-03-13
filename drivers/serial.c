@@ -10,7 +10,7 @@ static uint8_t buf[128];
 static ringbuffer_t rb_tx;
 void serial_init() {
     memset(buf, 0, sizeof(buf));
-    rb_init(&rb_tx, buf, sizeof(buf));
+    rb_init(&rb_tx, buf, sizeof(buf), sizeof(uint8_t));
     outb(COM1 + 1, 0x00); // Disable interrupts
 
     outb(COM1 + 3, 0x80); // Enable DLAB
@@ -26,7 +26,7 @@ void serial_init() {
 void serial_putc(char c) {
     // Putc will block until the ringbuffer is not full
     // since rb_put returns 1 on failure
-    while(rb_put(&rb_tx, c));
+    while(rb_put(&rb_tx, &c));
 
     if (inb(COM1 + 5) & 0x20) { // THR empty
         uint8_t data;
