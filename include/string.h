@@ -8,6 +8,7 @@
 #define __has_include(x) 0
 #endif
 
+void* memcpy(void* restrict dstptr, const void* restrict srcptr, size_t size);
 void* memmove(void* dstptr, const void* srcptr, size_t size);
 void* memset(void* bufptr, int val, size_t size);
 

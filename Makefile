@@ -23,13 +23,14 @@ drivers/ps2.o \
 drivers/serial.o \
 drivers/vga.o \
 kernel/kernel.o \
-kernel/kinput.o \
+kernel/kevent.o \
 kernel/klog.o \
 lib/ringbuffer/ringbuffer.o \
 lib/stdio/printf.o \
 lib/stdio/putc.o \
 lib/stdio/puts.o \
 lib/stdio/setcolor.o \
+lib/string/memcpy.o \
 lib/string/memmove.o \
 lib/string/memset.o \
 lib/string/strcat.o \
@@ -46,7 +47,7 @@ include/drivers/pic.h \
 include/drivers/ps2.h \
 include/drivers/serial.h \
 include/drivers/vga.h \
-include/kernel/kinput.h \
+include/kernel/kevent.h \
 include/kernel/klog.h \
 include/ansi.h \
 include/stdio.h \
@@ -84,4 +85,4 @@ kernel.dump: os.img
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f kernel.dump os.img $(OBJS) kernel.bin boot/bios/boot.o
+	rm -f kernel.dump os.img $(OBJS) kernel.bin boot/bios/boot.o qemu.log

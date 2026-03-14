@@ -4,7 +4,7 @@
 #include <io.h>
 #include <drivers/serial.h>
 #include <kernel/ringbuffer.h>
-#include <kernel/kinput.h>
+#include <kernel/kevent.h>
 
 static uint8_t buf[128];
 static ringbuffer_t rb_tx;
@@ -67,14 +67,12 @@ void serial_irq() {
             break;
         case 2: // Data ready
             data = inb(COM1 + 0);
-            kinput(data);
             break;
         case 3: // Line status
             inb(COM1 + 5); // Read LSR
             break;
         case 6: // RX timeout
             data = inb(COM1 + 0);
-            kinput(data);
             break;
         case 7: // DMA end of transfer
             break;
