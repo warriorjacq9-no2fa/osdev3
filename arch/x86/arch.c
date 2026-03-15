@@ -3,6 +3,14 @@
 #include <drivers/pit.h>
 #include <drivers/serial.h>
 
+void sti() {
+    asm volatile("sti");
+}
+
+void cli() {
+    asm volatile("cli");
+}
+
 void arch_init() {
     serial_init();
     isr_init();
@@ -12,5 +20,5 @@ void arch_init() {
     pic_unmask(0);
     pic_unmask(1);
     pic_unmask(4);
-    asm volatile("sti");
+    sti();
 }
