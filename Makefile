@@ -19,6 +19,7 @@ arch/x86/arch.o \
 arch/x86/interrupts.o \
 arch/x86/io.o \
 drivers/pic.o \
+drivers/pit.o \
 drivers/ps2.o \
 drivers/serial.o \
 drivers/vga.o \
@@ -44,6 +45,7 @@ arch/x86/include/io.h \
 arch/x86/include/stddef.h \
 arch/x86/interrupts.h \
 include/drivers/pic.h \
+include/drivers/pit.h \
 include/drivers/ps2.h \
 include/drivers/serial.h \
 include/drivers/vga.h \
@@ -68,8 +70,7 @@ kernel.bin: arch/x86/linker.ld $(OBJS)
 test: os.img kernel.dump
 	qemu-system-i386 -D qemu.log -d int \
 		--no-reboot --no-shutdown \
-		-hda $< \
-		-display curses
+		-hda $<
 
 kernel.dump: os.img
 	objdump -b binary -mi8086 --adjust-vma=0x7C00 -D $(BIOS_OBJS) > $@

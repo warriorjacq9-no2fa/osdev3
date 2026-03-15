@@ -14,6 +14,9 @@ void kmain() {
         .callback = kconsumer_char,
         .type = KEVENT_CHAR
     };
-    kevent_register(consumer);
+    if(kevent_register(consumer)) {
+        kprintf(LOG_ERR, "kernel", "Failed to register consumer for char event\r\n");
+        return;
+    }
     kprintf(LOG_INFO, "kernel", "Hello world!\r\n");
 }

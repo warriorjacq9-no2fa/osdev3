@@ -15,21 +15,21 @@ halt:
 .macro isr_err number
 _isr\number:
     push $\number
-    jmp isr_err_stub
+    jmp isr_stub
 .endm
 
 .macro isr_no_err number
 _isr\number:
     push $0
     push $\number
-    jmp isr_no_err_stub
+    jmp isr_stub
 .endm
 
 .macro irq number
 _isr\number:
     push $0
     push $\number
-    jmp isr_no_err_stub
+    jmp isr_stub
 .endm
 
 .macro isr_res number
@@ -88,15 +88,7 @@ irq         45
 irq         46
 irq         47
 
-isr_err_stub:
-    cli
-    pusha
-    call exception_handler
-    popa
-    add $8, %esp
-    iret
-
-isr_no_err_stub:
+isr_stub:
     cli
     pusha
     call exception_handler

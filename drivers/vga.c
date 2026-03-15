@@ -49,8 +49,8 @@ void vga_putc(char c) {
     } else if(c == '\r') {
         vga_col = 0;
     } else if(c == '\t') {
-        vga_clear(vga_col, vga_row, 8);
-        vga_col += 8;
+        vga_clear(vga_col, vga_row, 4);
+        vga_col += 4;
         if(vga_col >= VGA_WIDTH) vga_col = VGA_WIDTH - 1;
     } else if(c) {
         VGA_MEM[vga_row * VGA_WIDTH + vga_col] = c | (vga_color << 8);

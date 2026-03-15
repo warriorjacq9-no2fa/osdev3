@@ -6,9 +6,9 @@
 void arch_init() {
     serial_init();
     isr_init();
-    pit_set();
     pic_remap(0x20, 0x28);
     pic_setmask(0xFF, 0xFF);
+    pit_set(65535);
     pic_unmask(0);
     pic_unmask(1);
     pic_unmask(4);

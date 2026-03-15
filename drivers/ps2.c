@@ -16,7 +16,7 @@ static char ps2_sc1[] = {
     '7', '8', '9', '-',
     '4', '5', '6', '+',
     '1', '2', '3', '0', '.',
-    0,0,0, 0, 0
+    0, 0, 0, 0
 };
 
 static bool ext = false;
@@ -37,7 +37,10 @@ void ps2_irq() {
         kinput(&evt);
 
         // Send a character event as well
-        evt.type = KEVENT_CHAR;
-        evt.ch.character = ps2_sc1[keycode];
+        if(keycode < sizeof(ps2_sc1) && ps2_sc1[keycode]) {
+            evt.type = KEVENT_CHAR;
+            evt.ch.character = ps2_sc1[keycode];
+            kinput(&evt);
+        }
     }
 }

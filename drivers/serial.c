@@ -67,14 +67,23 @@ void serial_irq() {
             break;
         case 2: // Data ready
             data = inb(COM1 + 0);
+            goto event;
             break;
         case 3: // Line status
             inb(COM1 + 5); // Read LSR
             break;
         case 6: // RX timeout
             data = inb(COM1 + 0);
+            goto event;
             break;
         case 7: // DMA end of transfer
             break;
     }
+    return;
+event:
+    kevent_input_t evt = {
+        .type = KEVENT_CHAR,
+        .ch.character = data
+    };
+    kinput(&evt);
 }

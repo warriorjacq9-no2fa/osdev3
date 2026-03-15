@@ -1,4 +1,5 @@
 #include <kernel/kevent.h>
+#include <kernel/klog.h>
 #include <kernel/ringbuffer.h>
 #include <stdio.h>
 

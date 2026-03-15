@@ -40,6 +40,41 @@ static idtr_t idt_r;
 
 extern uint32_t isr_stubs[48];
 
+static char exceptions[][4] = {
+    "#DE",
+    "#DB",
+    "#NI",
+    "#BP",
+    "#OF",
+    "#BR",
+    "#UD",
+    "#NM",
+    "#DF",
+    "#CS",
+    "#TS",
+    "#NP",
+    "#SS",
+    "#GP",
+    "#PF",
+    "#RS",
+    "#MF",
+    "#AC",
+    "#MC",
+    "#XM",
+    "#VE",
+    "#CP",
+    "#RS",
+    "#RS",
+    "#RS",
+    "#RS",
+    "#RS",
+    "#RS",
+    "#HV",
+    "#VC",
+    "#SX",
+    "#RS",
+};
+
 void idt_add(uint8_t i, uint32_t isr, uint8_t flags) {
     idt[i].flags = flags | 0x80;
     idt[i].segment = 0x08; // Entry 1, GDT, ring 0
@@ -74,7 +109,18 @@ void exception_handler(iframe_t iframe) {
         }
         pic_eoi(iframe.vector - 32);
     } else {
-        kprintf(LOG_ERR, "x86", "Recieved exception %d\r\n", iframe.vector);
+        kprintf(LOG_ERR, "x86", "Recieved exception %s\r\n", exceptions[iframe.vector]);
+        kprintf(LOG_ERR, "x86",
+            "Stack frame:\r\n\
+            \tEDI: %08X ESI: %08X EBP: %08X ESP: %08X\r\n\
+            \tEBX: %08X EDX: %08X ECX: %08X EAX: %08X\r\n\
+            \tVEC: %08X ECODE: %08X EIP: %08X CS: %08X\r\n\
+            \tEFLAGS: %08X\r\n",
+            iframe.edi, iframe.esi, iframe.ebp, iframe.esp,
+            iframe.ebx, iframe.edx, iframe.ecx, iframe.eax,
+            iframe.vector, iframe.err_code, iframe.eip, iframe.cs,
+            iframe.eflags
+        );
         asm volatile("hlt");
     }
 }
