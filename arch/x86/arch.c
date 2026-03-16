@@ -11,6 +11,26 @@ void cli() {
     asm volatile("cli");
 }
 
+uint32_t get_cr0() {
+    uint32_t val;
+    asm volatile("mov %%cr0, %0" : "=r"(val));
+    return val;
+}
+
+void set_cr0(uint32_t val) { 
+    asm volatile("mov %0, %%cr0" :: "r"(val) : "memory");
+}
+
+uint32_t get_cr3() {
+    uint32_t val;
+    asm volatile("mov %%cr3, %0" : "=r"(val));
+    return val;
+}
+
+void set_cr3(uint32_t val) { 
+    asm volatile("mov %0, %%cr3" :: "r"(val) : "memory");
+}
+
 void arch_init() {
     serial_init();
     isr_init();
