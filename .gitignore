@@ -1,6 +1,8 @@
 *.o
 *.img
 *.bin
+*.elf
 *.dump
+*.map
 *.log
 .vscode/*
