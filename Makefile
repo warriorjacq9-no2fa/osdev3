@@ -6,7 +6,7 @@ CFLAGS ?= \
 -Iinclude \
 -Iarch/x86/include \
 -ffreestanding -fno-stack-protector \
--fno-pic \
+-fpic \
 -O2 -march=i386 -m32 \
 -Wall -Werror \
 -DKSIZE=$(KERNEL_SIZE_KB)

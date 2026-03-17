@@ -3,7 +3,12 @@
 
 .global _start
 _start:
-    mov $0x00010000, %esp
+    mov $0x0007E00, %esp
+    call mm_init
+    lea high, %ecx
+    jmp *%ecx
+high:
+    mov $0xC0010000, %esp
     call kmain
 
 halt:
@@ -11,6 +16,9 @@ halt:
     jmp halt
 
 .section .text
+
+.extern mm_init
+.extern kmain
 
 .macro isr_err number
 _isr\number:
@@ -96,7 +104,6 @@ isr_stub:
     add $8, %esp
     iret
 
-.extern kmain
 .extern irq_handler
 
 .section .data

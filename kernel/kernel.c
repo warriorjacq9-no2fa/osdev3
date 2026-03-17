@@ -9,7 +9,9 @@ void kconsumer_char(kevent_input_t *evt) {
 }
 
 void kmain() {
+#ifndef __i386__
     mm_init();
+#endif
     arch_init();
     kevent_init();
     kevent_consumer_t consumer = {
