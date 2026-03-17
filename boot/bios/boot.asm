@@ -19,7 +19,7 @@ _start:
     int 0x10
 
     ; Set up stack
-    mov sp, 0xFF00
+    mov sp, 0x7000
 
     ; Enable the A20 line
     call    a20wait

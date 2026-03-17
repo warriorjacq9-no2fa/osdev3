@@ -3,7 +3,6 @@
 
 .global _start
 _start:
-    mov $0x0007E00, %esp
     call mm_init
     lea high, %ecx
     jmp *%ecx
