@@ -66,7 +66,7 @@ done:
     mov ax, 0x07E0          ; regment (address / 16)
     mov es, ax
     mov bx, 0x0000          ; offset in segment (added to segment * 16)
-    mov ax, 0x0240          ; read 64 sectors (32 KiB)
+    mov ax, 0x0200 | KSIZE*2; sectors to read, KSIZE is in KiB
     mov ch, 0               ; cylinder 0
     mov cl, 2               ; sector 2 (1-based, first sector of kernel)
     mov dh, 0               ; head 0

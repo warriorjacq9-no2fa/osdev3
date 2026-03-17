@@ -1,3 +1,6 @@
+# Increase this if size-related issues pop up
+KERNEL_SIZE_KB = 32
+
 CC = i386-elf-gcc
 CFLAGS ?= \
 -Iinclude \
@@ -5,7 +8,8 @@ CFLAGS ?= \
 -ffreestanding -fno-stack-protector \
 -fno-pic \
 -O2 -march=i386 -m32 \
--Wall -Werror
+-Wall -Werror \
+-DKSIZE=$(KERNEL_SIZE_KB)
 
 AS = i386-elf-as
 AFLAGS ?= --32 -march=i386
@@ -18,6 +22,7 @@ arch/x86/boot.o \
 arch/x86/arch.o \
 arch/x86/interrupts.o \
 arch/x86/io.o \
+arch/x86/mm.o \
 drivers/pic.o \
 drivers/pit.o \
 drivers/ps2.o \
@@ -42,6 +47,7 @@ lib/string/strlen.o \
 HEADERS = \
 arch/x86/include/arch.h \
 arch/x86/include/io.h \
+arch/x86/include/mm.h \
 arch/x86/include/stddef.h \
 arch/x86/interrupts.h \
 include/drivers/pic.h \
@@ -71,8 +77,7 @@ kernel.bin: arch/x86/linker.ld $(OBJS)
 test: os.img kernel.dump
 	qemu-system-i386 -D qemu.log -d int \
 		--no-reboot --no-shutdown \
-		-hda $< \
-		-display curses
+		-hda $<
 
 kernel.dump: os.img
 	objdump -b binary -mi8086 --adjust-vma=0x7C00 -D $(BIOS_OBJS) > $@
@@ -82,7 +87,7 @@ kernel.dump: os.img
 	$(AS) $(AFLAGS) $< -o $@
 
 %.o: %.asm
-	nasm $< -fbin -o $@ 
+	nasm -dKSIZE=$(KERNEL_SIZE_KB) $< -fbin -o $@ 
 
 %.o: %.c $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@

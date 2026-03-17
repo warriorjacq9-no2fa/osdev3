@@ -1,5 +1,6 @@
 #include <kernel/klog.h>
 #include <kernel/kevent.h>
+#include <mm.h>
 #include <arch.h>
 #include <stdio.h>
 
@@ -8,6 +9,7 @@ void kconsumer_char(kevent_input_t *evt) {
 }
 
 void kmain() {
+    mm_init();
     arch_init();
     kevent_init();
     kevent_consumer_t consumer = {
