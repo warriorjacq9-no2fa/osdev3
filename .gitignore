@@ -2,6 +2,7 @@
 *.img
 *.bin
 *.elf
+*.obj
 *.dump
 *.map
 *.log

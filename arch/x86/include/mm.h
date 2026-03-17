@@ -8,5 +8,7 @@
 #define MEM_CACHELESS   0x10
 
 void mm_init();
+void* alloc_page();
+int map_page(void* phys, void* virt, uint8_t flags);
 
 #endif

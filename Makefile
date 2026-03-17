@@ -70,18 +70,20 @@ os.img: $(BIOS_OBJS) kernel.bin
 	cat $^ > $@
 
 kernel.bin: arch/x86/linker.ld $(OBJS)
-	$(CC) $(LDFLAGS) -T $^ $(LIBS) -o $@.elf
-	i386-elf-objcopy -O binary $@.elf $@
+	$(CC) $(LDFLAGS) -T $^ $(LIBS) -o $(basename $@).elf
+	i386-elf-objcopy -O binary $(basename $@).elf $(basename $@).obj
+	cp $(basename $@).obj $@
 	truncate -s 32K $@
 
 test: os.img kernel.dump
 	qemu-system-i386 -D qemu.log -d int \
 		--no-reboot --no-shutdown \
-		-hda $< -nographic -serial mon:stdio
+		-hda $< \
+		-nographic -serial mon:stdio
 
 kernel.dump: os.img
 	objdump -b binary -mi8086 --adjust-vma=0x7C00 -D $(BIOS_OBJS) > $@
-	i386-elf-objdump -D kernel.bin.elf >> $@
+	i386-elf-objdump -D kernel.elf >> $@
 
 %.o: %.S
 	$(AS) $(AFLAGS) $< -o $@
@@ -93,4 +95,4 @@ kernel.dump: os.img
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f kernel.dump os.img $(OBJS) kernel.bin kernel.bin.elf kernel.map boot/bios/boot.o qemu.log
+	rm -f kernel.dump os.img $(OBJS) kernel.bin kernel.elf kernel.obj kernel.map boot/bios/boot.o qemu.log
