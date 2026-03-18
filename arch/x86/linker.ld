@@ -21,4 +21,6 @@ SECTIONS
         *(COMMON)
         *(.bss)
     }
+
+    __kheap_start = .;
 }
