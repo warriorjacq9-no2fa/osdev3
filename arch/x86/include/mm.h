@@ -10,5 +10,6 @@
 void mm_init();
 void* alloc_page();
 int map_page(void* phys, void* virt, uint8_t flags);
+int page_fault(uint32_t cr2, uint32_t flags);
 
 #endif

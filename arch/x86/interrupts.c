@@ -5,6 +5,8 @@
 #include <drivers/pic.h>
 #include <drivers/serial.h>
 #include <drivers/ps2.h>
+#include <arch.h>
+#include <mm.h>
 #include <io.h>
 
 #define GT_TASK     0x5
@@ -109,6 +111,8 @@ void exception_handler(iframe_t iframe) {
         }
         pic_eoi(iframe.vector - 32);
     } else {
+        if(iframe.vector == 0xE)
+            if(!page_fault(get_cr2(), iframe.err_code)) return;
         kprintf(LOG_ERR, "x86", "Recieved exception %s\r\n", exceptions[iframe.vector]);
         kprintf(LOG_ERR, "x86",
             "Stack frame:\r\n\

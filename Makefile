@@ -9,7 +9,7 @@ CFLAGS ?= \
 -fpic \
 -O2 -march=i386 -m32 \
 -Wall -Werror \
--DKSIZE=$(KERNEL_SIZE_KB)
+-DKSIZE=$(KERNEL_SIZE_KB) -fno-delete-null-pointer-checks
 
 AS = i386-elf-as
 AFLAGS ?= --32 -march=i386

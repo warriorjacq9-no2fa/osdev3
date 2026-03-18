@@ -29,10 +29,14 @@ void mm_init() {
 
     // Identity map the lower pagetable
     // and map the higher half (1K pages)
-    for(int i = 0; i < 1024; i++) {
+    // Don't map the first page to catch
+    // null pointer errors
+    pagetab_id[0] = 0;
+    for(int i = 1; i < 1024; i++) {
         pagetab_id[i] = (i * PAGE_SIZE) | P_PRESENT | MEM_RW;
     }
-    pagedir[0] = ((uint32_t)pagetab_id) | P_PRESENT | MEM_RW;
+    // Identity-mapped code is RO
+    pagedir[0] = ((uint32_t)pagetab_id) | P_PRESENT;
     pagedir[i_pdir(0xC0000000)] = ((uint32_t)pagetab_id) | P_PRESENT | MEM_RW;
 
     // Recursively map the page directory
@@ -70,4 +74,11 @@ int map_page(void* phys, void* virt, uint8_t flags) {
     ptab[i_ptab((uint32_t)virt)] = ((uint32_t)phys & 0xFFFFF000) | flags | P_PRESENT;
     asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
     return 0;
+}
+
+int page_fault(uint32_t cr2, uint32_t flags) {
+    if(!(flags & P_PRESENT))
+        return map_page(alloc_page(), (void*)cr2, MEM_RW);
+    else
+        return 1;
 }

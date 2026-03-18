@@ -21,6 +21,12 @@ void set_cr0(uint32_t val) {
     asm volatile("mov %0, %%cr0" :: "r"(val) : "memory");
 }
 
+uint32_t get_cr2() {
+    uint32_t val;
+    asm volatile("mov %%cr2, %0" : "=r"(val));
+    return val;
+}
+
 uint32_t get_cr3() {
     uint32_t val;
     asm volatile("mov %%cr3, %0" : "=r"(val));
