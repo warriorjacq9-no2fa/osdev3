@@ -23,7 +23,7 @@ void kmain() {
         return;
     }
     kprintf(LOG_INFO, "kernel", "Hello world!\r\n");
-    uint32_t* t = (uint32_t*)0x400000;
+    uint32_t* t = (uint32_t*)alloc_page();
     map_page((void*)t, (void*)t, MEM_RW);
 
     kprintf(LOG_INFO, "mm_test", "t: %08X at %08X\r\n", *t, t);

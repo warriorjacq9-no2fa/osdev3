@@ -9,7 +9,7 @@
 #define P_GLOBAL    0x100
 
 #define PAGE_SIZE   0x1000
-#define MAX_PAGES   (2^32 / PAGE_SIZE)
+#define MAX_PAGES   ((1ULL << 32) / PAGE_SIZE)
 
 #define PHYS(addr) ((uint32_t)addr - 0xC0000000)
 
@@ -68,5 +68,6 @@ int map_page(void* phys, void* virt, uint8_t flags) {
     }
     uint32_t* ptab = PTAB(i_pdir((uint32_t)virt));
     ptab[i_ptab((uint32_t)virt)] = ((uint32_t)phys & 0xFFFFF000) | flags | P_PRESENT;
+    asm volatile("invlpg (%0)" : : "r"(virt) : "memory");
     return 0;
 }
