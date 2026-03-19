@@ -119,7 +119,7 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
         bool plusSign = false;
 
         int width = 0;
-        int precision = 6;
+        int precision = 0;
 
         char length = 0;
         char specifier;
@@ -297,15 +297,20 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
 
         if (specifier == 's')
         {
-
-            char *s = va_arg(list, char *);
+            const char *s = va_arg(list, const char *);
             if (!s)
                 s = "(null)";
 
-            if (precision)
-                s[precision] = '\0';
+            int len = 0;
+            while (s[len])
+                len++;
 
-            out_string(out, ctx, s, &chars);
+            if (precision && precision < len)
+                len = precision;
+
+            for (int j = 0; j < len; j++)
+                out_char(out, ctx, s[j], &chars);
+
             continue;
         }
 
