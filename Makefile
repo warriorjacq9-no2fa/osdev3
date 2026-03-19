@@ -7,14 +7,14 @@ CFLAGS ?= \
 -Iarch/x86/include \
 -ffreestanding -fno-stack-protector \
 -fpic \
--O2 -march=i386 -m32 \
+-Os -march=i386 -m32 -flto \
 -Wall -Werror \
 -DKSIZE=$(KERNEL_SIZE_KB) -fno-delete-null-pointer-checks
 
 AS = i386-elf-as
 AFLAGS ?= --32 -march=i386
 
-LDFLAGS ?= -nostdlib -no-pie -Wl,-Map=kernel.map
+LDFLAGS ?= -nostdlib -no-pie -Wl,-Map=kernel.map -flto
 LIBS ?= -lgcc
 
 OBJS = \
