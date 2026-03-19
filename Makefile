@@ -81,9 +81,13 @@ kernel.bin: arch/x86/linker.ld $(OBJS)
 	truncate -s 32K $@
 
 test: os.img kernel.dump
+	qemu-img create -f raw disk.img 100M
 	qemu-system-i386 -D qemu.log -d int \
 		--no-reboot --no-shutdown \
-		-fda $< \
+		-hda $< \
+		-drive id=disk,file=disk.img,if=none,format=raw \
+		-device ahci,id=ahci \
+		-device ide-hd,drive=disk,bus=ahci.0 \
 		-nographic -serial mon:stdio
 
 kernel.dump: os.img
