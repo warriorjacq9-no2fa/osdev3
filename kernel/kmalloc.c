@@ -4,8 +4,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#define KMALLOC_DEBUG
-
 #define MAX_COALESCE 65536
 #define MIN_SPLIT (sizeof(kheap_header_t) + 8 + sizeof(kheap_footer_t))
 
@@ -89,7 +87,9 @@ void kfree(void* addr) {
     kheap_header_t *hdr = (kheap_header_t*)((char*)addr - sizeof(kheap_header_t));
     kheap_footer_t *ftr = (kheap_footer_t*)((char*)addr + hdr->size);
     hdr->free = true;
+#ifdef KMALLOC_DEBUG
     size_t o_size = hdr->size;
+#endif
 
     // Coalesce neighbors
     kheap_header_t *right = (kheap_header_t*)((char*)ftr + sizeof(kheap_footer_t));
@@ -110,13 +110,12 @@ void kfree(void* addr) {
         kheap_footer_t *ftr_left = (kheap_footer_t*)((char*)hdr - sizeof(kheap_footer_t));
         kheap_header_t *left = ftr_left->header;
         if(left->free && left->size <= MAX_COALESCE) {
-            size_t s = left->size;
+    #ifdef KMALLOC_DEBUG
+            kprintf(LOG_INFO, "kmalloc", "Coalesced block on left of size %u\r\n", left->size, addr);
+    #endif
             left->size += sizeof(kheap_footer_t) + sizeof(kheap_header_t) + hdr->size;
             hdr = left;
             ftr->header = left;
-    #ifdef KMALLOC_DEBUG
-            kprintf(LOG_INFO, "kmalloc", "Coalesced block on left of size %u\r\n", s, addr);
-    #endif
         }
     }
 

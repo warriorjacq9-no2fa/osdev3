@@ -1,6 +1,8 @@
 #ifndef D_ATA_H
 #define D_ATA_H
 
+#include <stdint.h>
+
 #define ATA_DATA    0x1F0
 #define ATA_ERR     0x1F1
 #define ATA_FEAT    0x1F1

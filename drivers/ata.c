@@ -1,5 +1,7 @@
 #include <drivers/ata.h>
+#include <kernel/klog.h>
 #include <io.h>
+#include <string.h>
 #include <stdbool.h>
 
 
@@ -14,6 +16,7 @@ void ata_drq() {
 bool drive;
 
 int ata_init() {
+    drive = false;
     outb(ATA_DRIVE, 0xA0);
 
     outb(ATA_SECS, 0);
@@ -30,9 +33,16 @@ int ata_init() {
         uint16_t i = inb(ATA_LBAMID);
         i |= inb(ATA_LBAHIGH) << 8;
         if(i) {
-            if(i == 0xEB14) return ATA_ATAPIO;
-            if(i == 0xC33C) return ATA_SATA;
-            else return -1;
+            if(i == 0xEB14) {
+                kprintf(LOG_INFO, "ata", "Drive is ATAPIO\r\n");
+                return ATA_ATAPIO;
+            } else if(i == 0xC33C) {
+                kprintf(LOG_INFO, "ata", "Drive is SATA\r\n");
+                return ATA_SATA;
+            } else {
+                kprintf(LOG_ERR, "ata", "Error when getting status\r\n");
+                return -1;
+            }
         }
         ata_drq();
         if(!(inb(ATA_STATUS) & 0x01)){
@@ -41,14 +51,19 @@ int ata_init() {
             }
             drive = true;
             return 0;
+        } else {
+            kprintf(LOG_ERR, "ata", "Error when getting status\r\n");
         }
     }
-    drive = false;
+    kprintf(LOG_ERR, "ata", "No drive found\r\n");
     return -1;
 }
 
 void ata_read(uint32_t lba, uint8_t sectors, uint16_t* buf) {
-    if(!drive) return;
+    if(!drive) {
+        memset(buf, 0, sectors * 512);
+        return;
+    }
     ata_busy();
 
     outb(ATA_DRIVE, 0xE0 | ((lba >> 24) & 0x0F)); // master + LBA

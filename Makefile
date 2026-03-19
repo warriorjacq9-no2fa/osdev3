@@ -23,6 +23,7 @@ arch/x86/arch.o \
 arch/x86/interrupts.o \
 arch/x86/io.o \
 arch/x86/mm.o \
+drivers/ata.o \
 drivers/pic.o \
 drivers/pit.o \
 drivers/ps2.o \
@@ -51,6 +52,7 @@ arch/x86/include/io.h \
 arch/x86/include/mm.h \
 arch/x86/include/stddef.h \
 arch/x86/interrupts.h \
+include/drivers/ata.h \
 include/drivers/pic.h \
 include/drivers/pit.h \
 include/drivers/ps2.h \
@@ -81,7 +83,7 @@ kernel.bin: arch/x86/linker.ld $(OBJS)
 test: os.img kernel.dump
 	qemu-system-i386 -D qemu.log -d int \
 		--no-reboot --no-shutdown \
-		-hda $< \
+		-fda $< \
 		-nographic -serial mon:stdio
 
 kernel.dump: os.img

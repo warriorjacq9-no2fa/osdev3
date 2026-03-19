@@ -4,6 +4,7 @@
 #include <kernel/klog.h>
 #include <kernel/kevent.h>
 #include <kernel/kmalloc.h>
+#include <drivers/ata.h>
 #include <mm.h>
 #include <arch.h>
 
@@ -18,6 +19,7 @@ void kmain() {
     arch_init();
     kevent_init();
     kheap_init();
+    ata_init();
     kevent_consumer_t consumer = {
         .callback = kconsumer_char,
         .type = KEVENT_CHAR
