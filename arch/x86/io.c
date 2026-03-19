@@ -10,6 +10,16 @@ inline uint8_t inb(uint16_t port) {
     return ret;
 }
 
+inline void outw(uint16_t port, uint16_t data) {
+    asm volatile("outb %w0, %w1" : : "a"(data), "Nd"(port) : "memory");
+}
+
+inline uint16_t inw(uint16_t port) {
+    uint16_t ret;
+    asm volatile("inw %w1, %w0" : "=a"(ret) : "Nd"(port) : "memory");
+    return ret;
+}
+
 inline void iowait() {
     outb(0x80, 0);
 }
