@@ -24,7 +24,7 @@ static void* heap_base;
 void kheap_init() {
     heap_base = (void*)(((size_t)&__kheap_start + 0xFFF) & 0xFFFFF000);
     heap_ptr = heap_base;
-    kprintf(LOG_INFO, "kmalloc", "Heap at %p (%08X)\r\n", heap_ptr, &__kheap_start);
+    kprintf(LOG_INFO, "kmalloc", "Heap at %p (%p)\r\n", heap_ptr, &__kheap_start);
 }
 
 void* kmalloc(size_t size) {

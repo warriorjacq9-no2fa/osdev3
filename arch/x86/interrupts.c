@@ -93,7 +93,7 @@ void isr_init() {
     idt_r.limit = sizeof(idt) - 1;
 
     asm volatile("lidt %0" : : "m" (idt_r) : "memory");
-    kprintf(LOG_INFO, "x86", "Loaded IDT at base %08X, limit %04x\r\n", idt_r.base, idt_r.limit);
+    kprintf(LOG_INFO, "x86", "Loaded IDT with %u entries at %p\r\n", sizeof(idt) / sizeof(idt_entry_t), idt);
 }
 
 void exception_handler(iframe_t iframe) {

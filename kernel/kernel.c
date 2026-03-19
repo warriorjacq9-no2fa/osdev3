@@ -17,8 +17,8 @@ void kmain() {
     mm_init();
 #endif
     arch_init();
-    kevent_init();
     kheap_init();
+    kevent_init(16, 8);
     ata_init();
     kevent_consumer_t consumer = {
         .callback = kconsumer_char,
