@@ -85,6 +85,7 @@ void kfree(void* addr) {
     if(addr == NULL) return;
     // HDR is the address of the start of this block
     kheap_header_t *hdr = (kheap_header_t*)((char*)addr - sizeof(kheap_header_t));
+    if(hdr->free == true) return;
     kheap_footer_t *ftr = (kheap_footer_t*)((char*)addr + hdr->size);
     hdr->free = true;
 #ifdef KMALLOC_DEBUG
