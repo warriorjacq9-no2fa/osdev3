@@ -4,6 +4,7 @@
 #include <kernel/klog.h>
 #include <kernel/kevent.h>
 #include <kernel/kmalloc.h>
+#include <kernel/kthread.h>
 #include <drivers/ata.h>
 #include <mm.h>
 #include <arch.h>
@@ -12,12 +13,25 @@ void kconsumer_char(kevent_input_t *evt) {
     putc(evt->ch.character);
 }
 
+void* t0(void* a) {
+    kprintf(LOG_INFO, "thread0", "Hello %08X\r\n", *(uint32_t*)a);
+    kthread_schedule();
+    return a;
+}
+
+void* t1(void* a) {
+    kprintf(LOG_INFO, "thread1", "Hello %08X\r\n", *(uint32_t*)a);
+    kthread_schedule();
+    return a;
+}
+
 void kmain() {
 #ifndef __i386__
     mm_init();
 #endif
     arch_init();
     kheap_init();
+    kthread_init(2);
     kevent_init(16, 8);
     ata_init();
     kevent_consumer_t consumer = {
@@ -29,4 +43,9 @@ void kmain() {
         return;
     }
     kprintf(LOG_INFO, "kernel", "Hello world!\r\n");
+    uint32_t arg = 0x1BADB002;
+    kthread_create(t0, &arg);
+    kthread_create(t1, &arg);
+    kthread_schedule();
+    kprintf(LOG_INFO, "kernel", "We're back\r\n");
 }

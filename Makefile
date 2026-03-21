@@ -19,6 +19,7 @@ LIBS ?= -lgcc
 
 OBJS = \
 arch/x86/boot.o \
+arch/x86/ctx.o \
 arch/x86/arch.o \
 arch/x86/interrupts.o \
 arch/x86/io.o \
@@ -33,6 +34,7 @@ kernel/kernel.o \
 kernel/kevent.o \
 kernel/klog.o \
 kernel/kmalloc.o \
+kernel/kthread.o \
 lib/ringbuffer/ringbuffer.o \
 lib/stdio/printf.o \
 lib/stdio/putc.o \
@@ -61,6 +63,7 @@ include/drivers/vga.h \
 include/kernel/kevent.h \
 include/kernel/klog.h \
 include/kernel/kmalloc.h \
+include/kernel/kthread.h \
 include/kernel/ringbuffer.h \
 include/ansi.h \
 include/stdio.h \
