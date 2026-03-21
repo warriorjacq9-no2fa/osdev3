@@ -20,6 +20,7 @@ LIBS ?= -lgcc
 OBJS = \
 arch/x86/boot.o \
 arch/x86/ctx.o \
+arch/x86/kt_ctx.o \
 arch/x86/arch.o \
 arch/x86/interrupts.o \
 arch/x86/io.o \
@@ -50,6 +51,7 @@ lib/string/strlen.o \
 
 HEADERS = \
 arch/x86/include/arch.h \
+arch/x86/include/ctx.h \
 arch/x86/include/io.h \
 arch/x86/include/mm.h \
 arch/x86/include/stddef.h \

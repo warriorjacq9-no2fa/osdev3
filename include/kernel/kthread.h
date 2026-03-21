@@ -4,7 +4,15 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define THREAD_STACK_SIZE 1024
+
 typedef void*(*kthread_t)(void*);
+
+typedef struct kt_context {
+    kthread_t thread;
+    void* stack_base;
+    uintptr_t sp;
+} kt_context_t;
 
 int kthread_create(kthread_t thread, void* arg);
 void kthread_schedule();

@@ -44,6 +44,7 @@ void kmain() {
     }
     kprintf(LOG_INFO, "kernel", "Hello world!\r\n");
     uint32_t arg = 0x1BADB002;
+    uint32_t arg1 = 0x2BADB001;
     kthread_create(t0, &arg);
     kthread_create(t1, &arg);
     kthread_schedule();

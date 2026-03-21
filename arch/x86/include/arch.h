@@ -1,6 +1,8 @@
 #ifndef ARCH_H
 #define ARCH_H
 
+#define KSTACK_BASE 0xC0010000
+
 typedef struct registers {
     uint32_t edi, esi, ebp, esp;
     uint32_t ebx, edx, ecx, eax;
