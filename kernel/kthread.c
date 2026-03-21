@@ -20,6 +20,7 @@ int kthread_init(size_t max_threads) {
     num_t = 1;
     kt_context_t *kctx = &ctx_buf[0];
     kctx->thread = NULL;
+    kctx->state = TS_RUNNING;
     kctx->stack_base = (void*)KSTACK_BASE;
     kctx->sp = 0;
     return 0;
@@ -37,6 +38,7 @@ int kthread_create(kthread_t thread, void* arg) {
         kprintf(LOG_WARN, "kthread", "kmalloc returned NULL\r\n");
         return 1;
     }
+    ctx->state = TS_RUNNING;
     ctx->stack_base = base;
     ctx->sp = (uintptr_t)base + THREAD_STACK_SIZE;
     kt_init_context(ctx, arg);
@@ -51,8 +53,23 @@ void kthread_schedule() {
     size_t thread_curr = c_thread;
     size_t thread_next = (c_thread + 1) % num_t;
     c_thread = thread_next;
-    kprintf(LOG_INFO, "kthread", "Thread %u scheduled\r\n",
-        thread_next
+    if(ctx_buf[c_thread].state == TS_DONE) {
+        kt_context_t *ctx = &ctx_buf[c_thread];
+        kfree(ctx->stack_base);
+    } else {
+        kprintf(LOG_INFO, "kthread", "Thread %u scheduled\r\n",
+            thread_next
+        );
+        ctx_switch(&ctx_buf[thread_curr].sp, ctx_buf[thread_next].sp);
+    }
+}
+
+// This function is returned to by an exiting thread
+void kthread_ret() {
+    kt_context_t *ctx = &ctx_buf[c_thread];
+    ctx->state = TS_DONE;
+    kprintf(LOG_INFO, "kthread", "Thread %u returned\r\n",
+        c_thread
     );
-    ctx_switch(&ctx_buf[thread_curr].sp, ctx_buf[thread_next].sp);
+    kthread_schedule();
 }

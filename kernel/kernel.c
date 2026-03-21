@@ -15,7 +15,6 @@ void kconsumer_char(kevent_input_t *evt) {
 
 void* t0(void* a) {
     kprintf(LOG_INFO, "thread0", "Hello %08X\r\n", *(uint32_t*)a);
-    kthread_schedule();
     return a;
 }
 
@@ -46,7 +45,6 @@ void kmain() {
     uint32_t arg = 0x1BADB002;
     uint32_t arg1 = 0x2BADB001;
     kthread_create(t0, &arg);
-    kthread_create(t1, &arg);
-    kthread_schedule();
-    kprintf(LOG_INFO, "kernel", "We're back\r\n");
+    kthread_create(t1, &arg1);
+    while(1) kthread_schedule();
 }
