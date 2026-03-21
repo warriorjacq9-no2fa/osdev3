@@ -24,8 +24,7 @@ typedef struct idt_entry {
 } __attribute__((packed)) idt_entry_t;
 
 typedef struct iframe {
-    uint32_t edi, esi, ebp, esp;
-    uint32_t ebx, edx, ecx, eax;
+    registers_t r;
     uint32_t vector;
     uint32_t err_code;
     uint32_t eip, cs;
@@ -120,8 +119,8 @@ void exception_handler(iframe_t iframe) {
             \tEBX: %08X EDX: %08X ECX: %08X EAX: %08X\r\n\
             \tVEC: %08X ECODE: %08X EIP: %08X CS: %08X\r\n\
             \tEFLAGS: %08X\r\n",
-            iframe.edi, iframe.esi, iframe.ebp, iframe.esp,
-            iframe.ebx, iframe.edx, iframe.ecx, iframe.eax,
+            iframe.r.edi, iframe.r.esi, iframe.r.ebp, iframe.r.esp,
+            iframe.r.ebx, iframe.r.edx, iframe.r.ecx, iframe.r.eax,
             iframe.vector, iframe.err_code, iframe.eip, iframe.cs,
             iframe.eflags
         );
