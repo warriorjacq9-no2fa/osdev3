@@ -11,15 +11,18 @@ static uint8_t con_idx;
 static kevent_input_t *ibuf;
 static ringbuffer_t kinput_rb;
 
-void kevent_init(size_t buf_sz, size_t num_consumers) {
-    ibuf = (kevent_input_t*)kmalloc(buf_sz * sizeof(kevent_input_t));
+int kevent_init(size_t buf_sz, size_t num_consumers) {
+    ibuf = kmalloc(buf_sz * sizeof(kevent_input_t));
+    if(!ibuf) return 1;
     kprintf(LOG_INFO, "kevent", "Allocated event buffer for %u events at %p\r\n", buf_sz, ibuf);
 
     max_consumers = num_consumers;
-    consumers = (kevent_consumer_t*)kmalloc(num_consumers * sizeof(kevent_consumer_t));
+    consumers = kmalloc(num_consumers * sizeof(kevent_consumer_t));
+    if(!consumers) return 1;
     kprintf(LOG_INFO, "kevent", "Allocated consumer array of length %u at %p\r\n", num_consumers, consumers);
 
     rb_init(&kinput_rb, ibuf, buf_sz, sizeof(kevent_input_t));
+    return 0;
 }
 
 int kevent_register(kevent_consumer_t consumer) {
