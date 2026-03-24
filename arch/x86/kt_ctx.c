@@ -6,7 +6,12 @@ void kt_init_context(kt_context_t *ctx, void *arg) {
     *--sp = (uint32_t)arg;
     *--sp = (uint32_t)kthread_ret;
 
-    // Push thread as the return address so ret in ctx_switch jumps into it
+    // Fake an IRET frame
+    //      EFLAGS
+    //      CS
+    // ESP->EIP
+    *--sp = 0x0202; // EFLAGS
+    *--sp = 0x08; // CS
     *--sp = (uint32_t)ctx->thread;
 
     *--sp = 0;  // eax
