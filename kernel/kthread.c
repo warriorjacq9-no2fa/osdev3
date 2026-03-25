@@ -61,9 +61,6 @@ void kthread_schedule(uint32_t **curr_sp, uint32_t **next_sp) {
         kt_context_t *ctx = &ctx_buf[c_thread];
         kfree(ctx->stack_base);
     } else {
-        kprintf(LOG_INFO, "kthread", "Thread %u scheduled\r\n",
-            thread_next
-        );
         *curr_sp = &ctx_buf[thread_curr].sp;
         *next_sp = &ctx_buf[thread_next].sp;
     }
@@ -73,8 +70,5 @@ void kthread_schedule(uint32_t **curr_sp, uint32_t **next_sp) {
 void kthread_ret() {
     kt_context_t *ctx = &ctx_buf[c_thread];
     ctx->state = TS_DONE;
-    kprintf(LOG_INFO, "kthread", "Thread %u returned\r\n",
-        c_thread
-    );
     while(1);
 }

@@ -13,16 +13,6 @@ void kconsumer_char(kevent_input_t *evt) {
     putc(evt->ch.character);
 }
 
-void* t0(void* a) {
-    kprintf(LOG_INFO, "thread0", "Hello %08X\r\n", *(uint32_t*)a);
-    return a;
-}
-
-void* t1(void* a) {
-    kprintf(LOG_INFO, "thread1", "Hello %08X\r\n", *(uint32_t*)a);
-    return a;
-}
-
 void kmain() {
 #ifndef __i386__
     mm_init();
@@ -41,11 +31,5 @@ void kmain() {
         return;
     }
     kprintf(LOG_INFO, "kernel", "Hello world!\r\n");
-    uint32_t *arg = kmalloc(sizeof(uint32_t));
-    uint32_t *arg1 = kmalloc(sizeof(uint32_t));
-
-    *arg = 0x1BADB002;
-    *arg1 = 0x2BADB001;
-    kthread_create(t0, arg);
-    kthread_create(t1, arg1);
+    kthread_create(kevent_proc, NULL);
 }

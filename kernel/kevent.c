@@ -32,14 +32,14 @@ int kevent_register(kevent_consumer_t consumer) {
     return 0;
 }
 
-// It is the arch-specific code's job to call kevent_proc
-// On x86 it's Timer0 on the PIT
-void kevent_proc() {
-    kevent_input_t evt;
-    while(!rb_get(&kinput_rb, &evt)) {
-        for(int i = 0; i < con_idx; i++) {
-            if(consumers[i].type == evt.type)
-                consumers[i].callback(&evt);
+void* kevent_proc(void* arg) {
+    while(1) {
+        kevent_input_t evt;
+        while(!rb_get(&kinput_rb, &evt)) {
+            for(int i = 0; i < con_idx; i++) {
+                if(consumers[i].type == evt.type)
+                    consumers[i].callback(&evt);
+            }
         }
     }
 }
