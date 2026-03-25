@@ -14,12 +14,12 @@ CFLAGS ?= \
 AS = i386-elf-as
 AFLAGS ?= --32 -march=i386
 
-LDFLAGS ?= -nostdlib -no-pie -Wl,-Map=kernel.map -flto
+LDFLAGS ?= -nostdlib -no-pie -Wl,-z,stack-size=16384 -Wl,-Map=kernel.map -flto
 LIBS ?= -lgcc
 
 OBJS = \
 arch/x86/boot.o \
-arch/x86/ctx.o \
+arch/x86/kthread.o \
 arch/x86/kt_ctx.o \
 arch/x86/arch.o \
 arch/x86/interrupts.o \

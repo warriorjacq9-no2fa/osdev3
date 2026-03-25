@@ -7,7 +7,7 @@ _start:
     lea high, %ecx
     jmp *%ecx
 high:
-    mov $0xC0010000, %esp
+    mov $0xC0017E00, %esp // 32 KiB stack
     call kmain
 
 halt:
@@ -78,7 +78,7 @@ isr_no_err  28
 isr_no_err  29
 isr_err     30
 isr_res     31
-irq         32
+.extern _isr32
 irq         33
 irq         34
 irq         35

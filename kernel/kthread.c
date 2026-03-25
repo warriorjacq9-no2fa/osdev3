@@ -4,11 +4,13 @@
 #include <kernel/ringbuffer.h>
 #include <arch.h>
 #include <ctx.h>
+#include <stdbool.h>
 
 kt_context_t *ctx_buf;
 size_t c_thread;
 size_t num_t;
 size_t max_t;
+bool init = false;
 
 int kthread_init(size_t max_threads) {
     max_t = max_threads + 1;
@@ -23,6 +25,7 @@ int kthread_init(size_t max_threads) {
     kctx->state = TS_RUNNING;
     kctx->stack_base = (void*)KSTACK_BASE;
     kctx->sp = 0;
+    init = true;
     return 0;
 }
 
@@ -49,7 +52,8 @@ int kthread_create(kthread_t thread, void* arg) {
     return 0;
 }
 
-void kthread_schedule() {
+void kthread_schedule(uint32_t **curr_sp, uint32_t **next_sp) {
+    if(!init) return;
     size_t thread_curr = c_thread;
     size_t thread_next = (c_thread + 1) % num_t;
     c_thread = thread_next;
@@ -60,7 +64,8 @@ void kthread_schedule() {
         kprintf(LOG_INFO, "kthread", "Thread %u scheduled\r\n",
             thread_next
         );
-        ctx_switch(&ctx_buf[thread_curr].sp, ctx_buf[thread_next].sp);
+        *curr_sp = &ctx_buf[thread_curr].sp;
+        *next_sp = &ctx_buf[thread_next].sp;
     }
 }
 
@@ -71,5 +76,5 @@ void kthread_ret() {
     kprintf(LOG_INFO, "kthread", "Thread %u returned\r\n",
         c_thread
     );
-    kthread_schedule();
+    while(1);
 }

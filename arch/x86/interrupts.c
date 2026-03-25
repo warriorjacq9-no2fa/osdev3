@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <kernel/klog.h>
-#include <kernel/kevent.h>
+#include <kernel/kthread.h>
 #include <drivers/pic.h>
 #include <drivers/serial.h>
 #include <drivers/ps2.h>
@@ -98,9 +98,7 @@ void isr_init() {
 void exception_handler(iframe_t iframe) {
     if(iframe.vector > 31) {
         switch(iframe.vector - 32) {
-            case 0: // Timer IRQ
-                kevent_proc();
-                break;
+            // Timer IRQ is in assembly
             case 1: // Keyboard IRQ
                 ps2_irq();
                 break;
