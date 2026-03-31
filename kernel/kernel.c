@@ -37,7 +37,8 @@ void kmain() {
         return;
     }
     kprintf(LOG_INFO, "kernel", "Hello world!\r\n");
-    kthread_create(kevent_proc, NULL, PRIV_KERNEL);
-    kthread_create(usermode, NULL, PRIV_USER);
+    size_t efd, ufd;
+    kthread_create(kevent_proc, NULL, PRIV_KERNEL, &efd);
+    kthread_create(usermode, NULL, PRIV_USER, &ufd);
     while(1);
 }

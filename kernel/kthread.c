@@ -5,10 +5,10 @@
 #include <arch.h>
 #include <ctx.h>
 #include <stdbool.h>
+#include <string.h>
 
 kt_context_t *ctx_buf;
 size_t c_thread;
-size_t num_t;
 size_t max_t;
 bool init = false;
 
@@ -17,9 +17,9 @@ int kthread_init(size_t max_threads) {
     ctx_buf = kmalloc((max_threads + 1) * sizeof(kt_context_t), 0);
     if(!ctx_buf) return 1;
     kprintf(LOG_INFO, "kthread", "Allocated thread buffer for %u threads at %p\r\n", max_threads, ctx_buf);
+    memset(ctx_buf, 0, max_threads * sizeof(kt_context_t));
     c_thread = 0;
     // Establish the kernel as thread 0
-    num_t = 1;
     kt_context_t *kctx = &ctx_buf[0];
     kctx->thread = NULL;
     kctx->state = TS_RUNNING;
@@ -29,13 +29,15 @@ int kthread_init(size_t max_threads) {
     return 0;
 }
 
-int kthread_create(kthread_t thread, void* arg, char priv) {
-    if(num_t >= max_t) {
+int kthread_create(size_t *fd, kthread_t thread, void* arg, char priv) {
+    size_t t;
+    for(t = 0; t < max_t; t++) {
+        if(ctx_buf[t].state == TS_DONE || ctx_buf[t].state == TS_UNUSED) break;
+    }
+    if(t >= max_t) {
         kprintf(LOG_WARN, "kthread", "Thread limit reached\r\n");
         return 1;
     }
-    kt_context_t *ctx = &ctx_buf[num_t];
-    ctx->thread = thread;
     char flags = 0;
     if(priv != PRIV_KERNEL) flags = MEM_USER;
     void* base = kmalloc(THREAD_STACK_SIZE, flags);
@@ -43,28 +45,36 @@ int kthread_create(kthread_t thread, void* arg, char priv) {
         kprintf(LOG_WARN, "kthread", "kmalloc returned NULL\r\n");
         return 1;
     }
+    kt_context_t *ctx = &ctx_buf[t];
+    ctx->thread = thread;
     ctx->state = TS_RUNNING;
     ctx->stack_base = base;
     ctx->sp = (uintptr_t)base + THREAD_STACK_SIZE;
     kt_init_context(ctx, arg, priv);
     kprintf(LOG_INFO, "kthread", "Added thread at index %u, with stack at %p (sp %p), function at %p\r\n",
-        num_t, base, ctx->sp, thread
+        t, base, ctx->sp, thread
     );
-    num_t++;
+    *fd = t;
     return 0;
 }
 
-void kthread_schedule(uint32_t **curr_sp, uint32_t **next_sp) {
+void kthread_schedule(uintptr_t **curr_sp, uintptr_t **next_sp) {
     if(!init) return;
     size_t thread_curr = c_thread;
-    size_t thread_next = (c_thread + 1) % num_t;
+    size_t thread_next = (c_thread + 1) % max_t;
     c_thread = thread_next;
-    if(ctx_buf[c_thread].state == TS_DONE) {
-        kt_context_t *ctx = &ctx_buf[c_thread];
-        kfree(ctx->stack_base);
-    } else {
-        *curr_sp = &ctx_buf[thread_curr].sp;
-        *next_sp = &ctx_buf[thread_next].sp;
+    switch (ctx_buf[c_thread].state) {
+        case TS_DONE:
+            kt_context_t *ctx = &ctx_buf[c_thread];
+            kfree(ctx->stack_base);
+            break;
+        
+        case TS_RUNNING:
+            *curr_sp = &ctx_buf[thread_curr].sp;
+            *next_sp = &ctx_buf[thread_next].sp;
+
+        default:
+            break;
     }
 }
 
