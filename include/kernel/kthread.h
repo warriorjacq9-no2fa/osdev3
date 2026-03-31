@@ -5,6 +5,8 @@
 #include <stddef.h>
 
 #define THREAD_STACK_SIZE (16 * 1024) // 16 KiB stacks
+#define PRIV_KERNEL 0
+#define PRIV_USER   3
 
 typedef void*(*kthread_t)(void*);
 
@@ -21,7 +23,7 @@ typedef struct kt_context {
 } kt_context_t;
 
 void kthread_ret();
-int kthread_create(kthread_t thread, void* arg);
+int kthread_create(kthread_t thread, void* arg, char priv);
 void kthread_schedule(uint32_t **curr_sp, uint32_t **new_sp);
 int kthread_init(size_t max_threads);
 

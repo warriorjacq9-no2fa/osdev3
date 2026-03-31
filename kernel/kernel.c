@@ -13,12 +13,18 @@ void kconsumer_char(kevent_input_t *evt) {
     putc(evt->ch.character);
 }
 
+void* usermode(void*) {
+    kprintf(LOG_INFO, "userland", "Hello from userspace!\r\n");
+    return NULL;
+}
+
 void kmain() {
 #ifndef __i386__
     mm_init();
 #endif
     arch_init();
     kheap_init();
+    usermode_init();
     kthread_init(3);
     kevent_init(16, 8);
     ata_init();
@@ -31,5 +37,7 @@ void kmain() {
         return;
     }
     kprintf(LOG_INFO, "kernel", "Hello world!\r\n");
-    kthread_create(kevent_proc, NULL);
+    kthread_create(kevent_proc, NULL, PRIV_KERNEL);
+    kthread_create(usermode, NULL, PRIV_USER);
+    while(1);
 }

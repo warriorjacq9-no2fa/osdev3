@@ -8,6 +8,18 @@ _start:
     jmp *%ecx
 high:
     mov $0xC0017E00, %esp // 32 KiB stack
+
+    lgdt gdt_descriptor // Load our GDT instead of the bootloader's
+    jmp $0x08, $reload_cs   // far jump to reload CS
+
+reload_cs:
+    mov $0x10, %ax
+    mov %ax, %ds
+    mov %ax, %es
+    mov %ax, %fs
+    mov %ax, %gs
+    mov %ax, %ss
+
     call kmain
 
 halt:
@@ -15,6 +27,12 @@ halt:
     jmp halt
 
 .section .text
+
+.global flush_tss
+flush_tss:
+    mov $0x28, %ax
+    ltr %ax
+    ret
 
 .extern mm_init
 .extern kmain
@@ -106,6 +124,27 @@ isr_stub:
 .extern irq_handler
 
 .section .data
+
+.global gdt_start
+gdt_start:
+    // Null descriptor
+.quad   0x0
+    // Code segment
+.quad   0x00CF9B000000FFFF
+    // Data segment
+.quad   0x00CF92000000FFFF
+    // Userspace code segment
+.quad   0x00CFFB000000FFFF
+    // Userspace data segment
+.quad   0x00CFF2000000FFFF
+    // TSS placeholder for C
+.quad 0
+gdt_end:
+
+gdt_descriptor:
+.word   gdt_end - gdt_start - 1
+.long   gdt_start
+
 .macro isr_label number
     .long _isr\number
 .endm

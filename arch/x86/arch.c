@@ -1,7 +1,10 @@
+#include <arch.h>
+#include <kernel/kmalloc.h>
 #include "interrupts.h"
 #include <drivers/pic.h>
 #include <drivers/pit.h>
 #include <drivers/serial.h>
+#include <string.h>
 
 void sti() {
     asm volatile("sti");
@@ -35,6 +38,31 @@ uint32_t get_cr3() {
 
 void set_cr3(uint32_t val) { 
     asm volatile("mov %0, %%cr3" :: "r"(val) : "memory");
+}
+
+static tss_entry_t *tss;
+extern uint8_t gdt_start[48];
+extern void flush_tss(void);
+
+void usermode_init() {
+    tss = kmalloc(sizeof(tss_entry_t), 0);
+    memset(tss, 0, sizeof(tss_entry_t));
+
+    uint32_t addr = (uint32_t)tss;
+    uint32_t size = sizeof(tss_entry_t) - 1;
+
+    gdt_start[5 * 8 + 0] = size & 0xFF; // Limit 0
+    gdt_start[5 * 8 + 1] = (size >> 8) & 0xFF; // Limit 1
+    gdt_start[5 * 8 + 2] = addr & 0xFF; // Base 0
+    gdt_start[5 * 8 + 3] = (addr >> 8) & 0xFF; // Base 1
+    gdt_start[5 * 8 + 4] = (addr >> 16) & 0xFF; // Base 2
+    gdt_start[5 * 8 + 5] = 0x89; // Access byte
+    gdt_start[5 * 8 + 6] = (size >> 16) & 0x0F; // Flags, Limit 2
+    gdt_start[5 * 8 + 7] = addr >> 24; // Base 3
+
+    tss->ss0 = 0x10;
+    tss->esp0 = 0xC0017E00;
+    flush_tss();
 }
 
 void arch_init() {

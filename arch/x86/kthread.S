@@ -1,6 +1,10 @@
 .global _isr32
 _isr32:
     pusha
+    push %gs
+    push %fs
+    push %es
+    push %ds
 
     push $32
     call pic_eoi
@@ -22,6 +26,10 @@ _isr32:
     mov (%eax), %esp // Set ESP to new_sp
 
 .zero:
+    pop %ds
+    pop %es
+    pop %fs
+    pop %gs
     popa
     iret
 

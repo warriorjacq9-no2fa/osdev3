@@ -14,7 +14,7 @@ bool init = false;
 
 int kthread_init(size_t max_threads) {
     max_t = max_threads + 1;
-    ctx_buf = kmalloc((max_threads + 1) * sizeof(kt_context_t));
+    ctx_buf = kmalloc((max_threads + 1) * sizeof(kt_context_t), 0);
     if(!ctx_buf) return 1;
     kprintf(LOG_INFO, "kthread", "Allocated thread buffer for %u threads at %p\r\n", max_threads, ctx_buf);
     c_thread = 0;
@@ -29,14 +29,16 @@ int kthread_init(size_t max_threads) {
     return 0;
 }
 
-int kthread_create(kthread_t thread, void* arg) {
+int kthread_create(kthread_t thread, void* arg, char priv) {
     if(num_t >= max_t) {
         kprintf(LOG_WARN, "kthread", "Thread limit reached\r\n");
         return 1;
     }
     kt_context_t *ctx = &ctx_buf[num_t];
     ctx->thread = thread;
-    void* base = kmalloc(THREAD_STACK_SIZE);
+    char flags = 0;
+    if(priv != PRIV_KERNEL) flags = MEM_USER;
+    void* base = kmalloc(THREAD_STACK_SIZE, flags);
     if(!base) {
         kprintf(LOG_WARN, "kthread", "kmalloc returned NULL\r\n");
         return 1;
@@ -44,7 +46,7 @@ int kthread_create(kthread_t thread, void* arg) {
     ctx->state = TS_RUNNING;
     ctx->stack_base = base;
     ctx->sp = (uintptr_t)base + THREAD_STACK_SIZE;
-    kt_init_context(ctx, arg);
+    kt_init_context(ctx, arg, priv);
     kprintf(LOG_INFO, "kthread", "Added thread at index %u, with stack at %p (sp %p), function at %p\r\n",
         num_t, base, ctx->sp, thread
     );
