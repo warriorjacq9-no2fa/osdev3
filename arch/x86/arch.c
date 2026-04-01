@@ -6,12 +6,8 @@
 #include <drivers/serial.h>
 #include <string.h>
 
-void sti() {
-    asm volatile("sti");
-}
-
-void cli() {
-    asm volatile("cli");
+void wait() {
+    asm volatile("hlt");
 }
 
 uint32_t get_cr0() {
@@ -20,7 +16,7 @@ uint32_t get_cr0() {
     return val;
 }
 
-void set_cr0(uint32_t val) { 
+inline void set_cr0(uint32_t val) { 
     asm volatile("mov %0, %%cr0" :: "r"(val) : "memory");
 }
 
@@ -36,8 +32,16 @@ uint32_t get_cr3() {
     return val;
 }
 
-void set_cr3(uint32_t val) { 
+inline void set_cr3(uint32_t val) { 
     asm volatile("mov %0, %%cr3" :: "r"(val) : "memory");
+}
+
+inline void lock() {
+    asm volatile("cli");
+}
+
+inline void unlock() {
+    asm volatile("sti");
 }
 
 static tss_entry_t *tss;
@@ -74,5 +78,5 @@ void arch_init() {
     pic_unmask(0);
     pic_unmask(1);
     pic_unmask(4);
-    sti();
+    asm volatile("sti");
 }
