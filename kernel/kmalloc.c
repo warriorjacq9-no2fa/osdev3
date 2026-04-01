@@ -86,6 +86,12 @@ void* kmalloc(size_t size, char flags) {
     return addr;
 }
 
+int __kmem_is_user(void* addr) {
+    if(addr == NULL) return 0;
+
+    return (addr <= (void*)0xC0000000) && (addr >= (void*)0x10000000);
+}
+
 void kfree(void* addr) {
     if(addr == NULL) return;
     // HDR is the address of the start of this block

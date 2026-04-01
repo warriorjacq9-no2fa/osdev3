@@ -65,6 +65,7 @@ void* alloc_page() {
             return (void*)((i * 32 + bit) * PAGE_SIZE);
         }
     }
+    kprintf(LOG_WARN, "mm", "OOM\r\n");
     return 0;
 }
 
@@ -79,8 +80,9 @@ int map_page(uint32_t* pagedir, void* phys, void* virt, uint8_t flags) {
         pagedir[i_pdir(vaddr)] = page | P_PRESENT | P_RW;
         if(flags & MEM_USER) pagedir[i_pdir(vaddr)] |= P_USER;
         memset(PTAB(i_pdir(vaddr)), 0, PAGE_SIZE);
-    } else if((flags & MEM_USER) && !(pagedir[i_pdir(vaddr)] & P_USER))
-        return 1;
+    } else if((flags & MEM_USER) && !(pagedir[i_pdir(vaddr)] & P_USER)) {
+        pagedir[i_pdir(vaddr)] |= P_USER;
+    }
     
     uint32_t* ptab = PTAB(i_pdir(vaddr));
     ptab[i_ptab(vaddr)] = ((uint32_t)phys & 0xFFFFF000) | P_PRESENT;
@@ -92,11 +94,18 @@ int map_page(uint32_t* pagedir, void* phys, void* virt, uint8_t flags) {
 
 int page_fault(uint32_t cr2, uint32_t flags) {
     if(!(flags & P_PRESENT)) {
-        if(flags & P_USER) {
-            if(cr2 >= 0xC0000000) return 1;
+        if(__kmem_is_user((void*)cr2))
             return map_page(kpagedir, alloc_page(), (void*)cr2, MEM_RW | MEM_USER);
-        }
 
         return map_page(kpagedir, alloc_page(), (void*)cr2, MEM_RW);
-    } else return 1;
+    }
+    char ecode[] = {'-','-','-','-','-','-','-','-', 0};
+    if(flags & P_PRESENT) ecode[7] = 'P';
+    if(flags & P_RW) ecode[6] = 'W';
+    if(flags & P_USER) ecode[5] = 'U';
+    if(flags & 0x08) ecode[4] = 'R';
+    if(flags & 0x10) ecode[3] = 'I';
+    kprintf(LOG_ERR, "mm", "Unresolvable #PF\r\n");
+    kprintf(LOG_ERR, "mm", "Faulting address: 0x%08X, flags: %s\r\n", cr2, ecode);
+    return 1;
 }

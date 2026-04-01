@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 #include <kernel/klog.h>
 #include <kernel/kevent.h>
 #include <kernel/kmalloc.h>
@@ -13,11 +14,6 @@ void kconsumer_char(kevent_input_t *evt) {
     putc(evt->ch.character);
 }
 
-void* usermode(void*) {
-    kprintf(LOG_INFO, "userland", "Hello from userspace!\r\n");
-    return NULL;
-}
-
 void kmain() {
 #ifndef __i386__
     mm_init();
@@ -27,9 +23,8 @@ void kmain() {
     usermode_init();
     kthread_init(3);
     kevent_init(16, 8);
-    size_t efd;//, ufd;
+    size_t efd;
     kthread_create(&efd, kevent_proc, NULL, PRIV_KERNEL);
-    //kthread_create(&ufd, usermode, NULL, PRIV_USER);
     ata_init();
     kevent_consumer_t consumer = {
         .callback = kconsumer_char,
