@@ -9,7 +9,6 @@
 
 void kheap_init();
 void* kmalloc(size_t size, char flags);
-char __kmem_get_flags(void* addr);
 void kfree(void* addr);
 
 #endif

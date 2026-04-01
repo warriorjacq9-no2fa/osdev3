@@ -14,6 +14,7 @@ int rb_empty(ringbuffer_t *rb) {
 }
 
 int rb_full(ringbuffer_t *rb) {
+    if(rb->size == 0) return 0;
     return ((rb->head + 1) % rb->size) == rb->tail;
 }
 

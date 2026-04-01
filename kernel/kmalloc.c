@@ -18,13 +18,15 @@ typedef struct kheap_footer {
 
 extern size_t __kheap_start;
 
-static void* heap_ptr;
-static void* heap_base;
+static void* heap_ptr[2];
+static void* heap_base[2];
 
 void kheap_init() {
-    heap_base = (void*)(((size_t)&__kheap_start + 0xFFF) & 0xFFFFF000);
-    heap_ptr = heap_base;
-    kprintf(LOG_INFO, "kmalloc", "Heap at %p (%p)\r\n", heap_ptr, &__kheap_start);
+    heap_base[0] = (void*)(((size_t)&__kheap_start + 0xFFF) & 0xFFFFF000);
+    heap_ptr[0] = heap_base[0];
+    heap_base[1] = (void*)(0x10000000);
+    heap_ptr[1] = heap_base[1];
+    kprintf(LOG_INFO, "kmalloc", "Heap at %p (%p)\r\n", heap_ptr[0], &__kheap_start);
 }
 
 void* kmalloc(size_t size, char flags) {
@@ -34,9 +36,10 @@ void* kmalloc(size_t size, char flags) {
 #endif
         return NULL;
     }
+    size_t heap_idx = (flags & MEM_USER) ? 1 : 0;
     size_t a_size = (size + 0x7) & ~0x7;
-    void* c = heap_base;
-    while(c < heap_ptr) {
+    void* c = heap_base[heap_idx];
+    while(c < heap_ptr[heap_idx]) {
         kheap_header_t *hdr = (kheap_header_t*)c;
         void* addr = (void*)((char*)c + sizeof(kheap_header_t));
         void* next = (void*)((char*)addr + hdr->size + sizeof(kheap_footer_t));
@@ -65,43 +68,22 @@ void* kmalloc(size_t size, char flags) {
         }
         c = next;
     }
-    kheap_header_t *hdr = (kheap_header_t*)heap_ptr;
+    kheap_header_t *hdr = (kheap_header_t*)heap_ptr[heap_idx];
     hdr->flags = MEM_PRESENT;
     hdr->flags |= flags;
     hdr->size = a_size;
-    heap_ptr += sizeof(kheap_header_t);
+    heap_ptr[heap_idx] += sizeof(kheap_header_t);
 
-    void* addr = heap_ptr;
-    heap_ptr += a_size;
+    void* addr = heap_ptr[heap_idx];
+    heap_ptr[heap_idx] += a_size;
 
-    kheap_footer_t *ftr = (kheap_footer_t*)heap_ptr;
+    kheap_footer_t *ftr = (kheap_footer_t*)heap_ptr[heap_idx];
     ftr->header = hdr;
-    heap_ptr += sizeof(kheap_footer_t);
+    heap_ptr[heap_idx] += sizeof(kheap_footer_t);
 #ifdef KMALLOC_DEBUG
     kprintf(LOG_INFO, "kmalloc", "Created block at %p with size %u\r\n", addr, a_size);
 #endif
     return addr;
-}
-
-char __kmem_get_flags(void* addr) {
-    if(addr == NULL) return 0;
-
-    void* c = heap_base;
-
-    while(c < heap_ptr) {
-        kheap_header_t *hdr = (kheap_header_t*)c;
-        void* start = (char*)c + sizeof(kheap_header_t);
-        void* end = (char*)start + hdr->size;
-
-        if(addr >= start && addr < end) {
-            return hdr->flags;
-        }
-
-        c = (char*)end + sizeof(kheap_footer_t);
-    }
-
-    // Address not in heap
-    return 0;
 }
 
 void kfree(void* addr) {
@@ -109,6 +91,7 @@ void kfree(void* addr) {
     // HDR is the address of the start of this block
     kheap_header_t *hdr = (kheap_header_t*)((char*)addr - sizeof(kheap_header_t));
     if(!(hdr->flags & MEM_PRESENT)) return;
+    size_t heap_idx = (hdr->flags & MEM_USER) ? 1 : 0;
     kheap_footer_t *ftr = (kheap_footer_t*)((char*)addr + hdr->size);
     hdr->flags &= ~MEM_PRESENT;
 #ifdef KMALLOC_DEBUG
@@ -118,7 +101,7 @@ void kfree(void* addr) {
     // Coalesce neighbors
     kheap_header_t *right = (kheap_header_t*)((char*)ftr + sizeof(kheap_footer_t));
 
-    if((void*)right < heap_ptr && !(right->flags & MEM_PRESENT) && right->size <= MAX_COALESCE) {
+    if((void*)right < heap_ptr[heap_idx] && !(right->flags & MEM_PRESENT) && right->size <= MAX_COALESCE) {
         kheap_footer_t *ftr_right = (kheap_footer_t*)(
             (char*)right + sizeof(kheap_header_t) + right->size
         );
@@ -130,7 +113,7 @@ void kfree(void* addr) {
 #endif
     }
     
-    if((void*)hdr > heap_base) {
+    if((void*)hdr > heap_base[heap_idx]) {
         kheap_footer_t *ftr_left = (kheap_footer_t*)((char*)hdr - sizeof(kheap_footer_t));
         kheap_header_t *left = ftr_left->header;
         if(!(left->flags & MEM_PRESENT) && left->size <= MAX_COALESCE) {

@@ -93,8 +93,7 @@ int map_page(uint32_t* pagedir, void* phys, void* virt, uint8_t flags) {
 int page_fault(uint32_t cr2, uint32_t flags) {
     if(!(flags & P_PRESENT)) {
         if(flags & P_USER) {
-            char mflags = __kmem_get_flags((void*)cr2);
-            if(!(mflags & MEM_USER)) return 1;
+            if(cr2 >= 0xC0000000) return 1;
             return map_page(kpagedir, alloc_page(), (void*)cr2, MEM_RW | MEM_USER);
         }
 

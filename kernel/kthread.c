@@ -14,9 +14,9 @@ bool init = false;
 
 int kthread_init(size_t max_threads) {
     max_t = max_threads + 1;
-    ctx_buf = kmalloc((max_threads + 1) * sizeof(kt_context_t), 0);
+    ctx_buf = kmalloc(max_t * sizeof(kt_context_t), 0);
     if(!ctx_buf) return 1;
-    kprintf(LOG_INFO, "kthread", "Allocated thread buffer for %u threads at %p\r\n", max_threads, ctx_buf);
+    kprintf(LOG_INFO, "kthread", "Allocated thread buffer for %u threads at %p\r\n", max_t - 1, ctx_buf);
     memset(ctx_buf, 0, max_threads * sizeof(kt_context_t));
     c_thread = 0;
     // Establish the kernel as thread 0

@@ -7,14 +7,14 @@ CFLAGS ?= \
 -Iarch/x86/include \
 -ffreestanding -fno-stack-protector \
 -fpic \
--Os -march=i386 -m32 -flto \
+-Os -march=i386 -m32 \
 -Wall -Werror \
--DKSIZE=$(KERNEL_SIZE_KB) -fno-delete-null-pointer-checks
+-DKSIZE=$(KERNEL_SIZE_KB) -fno-delete-null-pointer-checks -g
 
 AS = i386-elf-as
 AFLAGS ?= --32 -march=i386
 
-LDFLAGS ?= -nostdlib -no-pie -Wl,-z,stack-size=16384 -Wl,-Map=kernel.map -flto
+LDFLAGS ?= -nostdlib -no-pie -Wl,-z,stack-size=16384 -Wl,-Map=kernel.map -g
 LIBS ?= -lgcc
 
 OBJS = \
@@ -95,9 +95,9 @@ test: os.img kernel.dump
 		-device ide-hd,drive=disk,bus=ahci.0 \
 		-nographic -serial mon:stdio
 
-kernel.dump: os.img
+kernel.dump: $(BIOS_OBJS) kernel.bin
 	objdump -b binary -mi8086 --adjust-vma=0x7C00 -D $(BIOS_OBJS) > $@
-	i386-elf-objdump -D kernel.elf >> $@
+	i386-elf-objdump -S kernel.elf >> $@
 
 %.o: %.S
 	$(AS) $(AFLAGS) $< -o $@
