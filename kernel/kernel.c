@@ -23,8 +23,6 @@ void kmain() {
     usermode_init();
     kthread_init(3);
     kevent_init(16, 8);
-    size_t efd;
-    kthread_create(&efd, kevent_proc, NULL, PRIV_KERNEL);
     ata_init();
     kevent_consumer_t consumer = {
         .callback = kconsumer_char,
@@ -34,6 +32,15 @@ void kmain() {
         kprintf(LOG_ERR, "kernel", "Failed to register consumer for char event\r\n");
         return;
     }
+    size_t efd, ufd;
+    kthread_create(&efd, kevent_proc, NULL, PRIV_KERNEL);
     kprintf(LOG_INFO, "kernel", "Hello world!\r\n");
+    void* ubuf = kmalloc(1024, MEM_USER);
+    ata_read((32768 + 512) / 512, 2, (uint16_t*)ubuf);
+    kprintf(LOG_INFO, "kernel", "Read user binary\r\n");
+
+    kthread_create(&ufd, (kthread_t)ubuf, NULL, PRIV_USER);
+    kprintf(LOG_INFO, "kernel", "Ran user binary\r\n");
+
     while(1) wait();
 }

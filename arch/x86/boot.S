@@ -113,10 +113,18 @@ irq         45
 irq         46
 irq         47
 
+.global isr_syscall
+isr_syscall:
+    push $0
+    push $0x80
 isr_stub:
     cli
     pusha
+
+    mov %esp, %eax
+    push %eax
     call exception_handler
+    add $4, %esp
     popa
     add $8, %esp
     iret

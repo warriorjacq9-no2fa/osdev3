@@ -21,6 +21,9 @@ typedef struct kt_context {
     unsigned char state;
     void* stack_base;
     uintptr_t sp;
+
+    void* kstack_base;
+    uintptr_t ksp;
 } kt_context_t;
 
 void kthread_ret();

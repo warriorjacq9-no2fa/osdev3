@@ -31,6 +31,7 @@ drivers/pit.o \
 drivers/ps2.o \
 drivers/serial.o \
 drivers/vga.o \
+kernel/kcall.o \
 kernel/kernel.o \
 kernel/kevent.o \
 kernel/klog.o \
@@ -62,6 +63,7 @@ include/drivers/pit.h \
 include/drivers/ps2.h \
 include/drivers/serial.h \
 include/drivers/vga.h \
+include/kernel/kcall.h \
 include/kernel/kevent.h \
 include/kernel/klog.h \
 include/kernel/kmalloc.h \
@@ -74,10 +76,13 @@ include/string.h
 BIOS_OBJS = \
 boot/bios/boot.o
 
-.PHONY: clean test bios
+.PHONY: clean test bios usr
 
-os.img: $(BIOS_OBJS) kernel.bin
-	cat $^ > $@
+os.img: $(BIOS_OBJS) kernel.bin usr
+	cat $(BIOS_OBJS) kernel.bin usr/main.bin > $@
+
+usr:
+	$(MAKE) -C usr
 
 kernel.bin: arch/x86/linker.ld $(OBJS)
 	$(CC) $(LDFLAGS) -T $^ $(LIBS) -o $(basename $@).elf
@@ -86,14 +91,16 @@ kernel.bin: arch/x86/linker.ld $(OBJS)
 	truncate -s 32K $@
 
 test: os.img kernel.dump
-	qemu-img create -f raw disk.img 100M
 	qemu-system-i386 -D qemu.log -d int \
 		--no-reboot --no-shutdown \
 		-hda $< \
-		-drive id=disk,file=disk.img,if=none,format=raw \
-		-device ahci,id=ahci \
-		-device ide-hd,drive=disk,bus=ahci.0 \
 		-nographic -serial mon:stdio
+
+debug: os.img kernel.dump
+	qemu-system-i386 -D qemu.log -d int \
+		--no-reboot --no-shutdown \
+		-hda $< \
+		-nographic -serial mon:stdio -s -S
 
 kernel.dump: $(BIOS_OBJS) kernel.bin
 	objdump -b binary -mi8086 --adjust-vma=0x7C00 -D $(BIOS_OBJS) > $@
@@ -109,4 +116,5 @@ kernel.dump: $(BIOS_OBJS) kernel.bin
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
+	$(MAKE) -C usr clean
 	rm -f kernel.dump os.img $(OBJS) kernel.bin kernel.elf kernel.obj kernel.map boot/bios/boot.o qemu.log

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <kernel/klog.h>
 #include <kernel/kthread.h>
+#include <kernel/kcall.h>
 #include <drivers/pic.h>
 #include <drivers/serial.h>
 #include <drivers/ps2.h>
@@ -36,10 +37,11 @@ typedef struct idtr {
     uint32_t base;
 } __attribute__((packed)) idtr_t;
 
-static idt_entry_t idt[48];
+static idt_entry_t idt[129];
 static idtr_t idt_r;
 
 extern uint32_t isr_stubs[48];
+extern uint32_t isr_syscall;
 
 static char exceptions[][4] = {
     "#DE",
@@ -88,6 +90,7 @@ void isr_init() {
     for(int i = 0; i < 48; i++) {
         idt_add(i, isr_stubs[i], GT_INT32);
     }
+    idt_add(128, (uint32_t)&isr_syscall, GT_TRAP32 | 0x60);
     idt_r.base = (uint32_t)&idt[0];
     idt_r.limit = sizeof(idt) - 1;
 
@@ -95,9 +98,9 @@ void isr_init() {
     kprintf(LOG_INFO, "x86", "Loaded IDT with %u entries at %p\r\n", sizeof(idt) / sizeof(idt_entry_t), idt);
 }
 
-void exception_handler(iframe_t iframe) {
-    if(iframe.vector > 31) {
-        switch(iframe.vector - 32) {
+void exception_handler(iframe_t *iframe) {
+    if(iframe->vector > 31) {
+        switch(iframe->vector - 32) {
             // Timer IRQ is in assembly
             case 1: // Keyboard IRQ
                 ps2_irq();
@@ -105,22 +108,25 @@ void exception_handler(iframe_t iframe) {
             case 4: // COM1
                 serial_irq();
                 break;
+            case 0x60: // Syscall
+                kcall_proc(iframe->r.eax, iframe->r.ebx, iframe->r.ecx, iframe->r.edx, iframe->r.edi);
+                break;
         }
-        pic_eoi(iframe.vector - 32);
+        pic_eoi(iframe->vector - 32);
     } else {
-        if(iframe.vector == 0xE)
-            if(!page_fault(get_cr2(), iframe.err_code)) return;
-        kprintf(LOG_ERR, "x86", "Recieved exception %s\r\n", exceptions[iframe.vector]);
+        if(iframe->vector == 0xE)
+            if(!page_fault(get_cr2(), iframe->err_code)) return;
+        kprintf(LOG_ERR, "x86", "Recieved exception %s\r\n", exceptions[iframe->vector]);
         kprintf(LOG_ERR, "x86",
             "Stack frame:\r\n\
             \tEDI: %08X ESI: %08X EBP: %08X ESP: %08X\r\n\
             \tEBX: %08X EDX: %08X ECX: %08X EAX: %08X\r\n\
             \tVEC: %08X ECODE: %08X EIP: %08X CS: %08X\r\n\
             \tEFLAGS: %08X\r\n",
-            iframe.r.edi, iframe.r.esi, iframe.r.ebp, iframe.r.esp,
-            iframe.r.ebx, iframe.r.edx, iframe.r.ecx, iframe.r.eax,
-            iframe.vector, iframe.err_code, iframe.eip, iframe.cs,
-            iframe.eflags
+            iframe->r.edi, iframe->r.esi, iframe->r.ebp, iframe->r.esp,
+            iframe->r.ebx, iframe->r.edx, iframe->r.ecx, iframe->r.eax,
+            iframe->vector, iframe->err_code, iframe->eip, iframe->cs,
+            iframe->eflags
         );
         asm volatile("hlt");
     }

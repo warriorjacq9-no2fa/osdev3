@@ -50,5 +50,6 @@ void lock();
 void unlock();
 void arch_init();
 void usermode_init();
+void kstack_update(uintptr_t sp);
 
 #endif

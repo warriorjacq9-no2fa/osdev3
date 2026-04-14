@@ -69,6 +69,10 @@ void usermode_init() {
     flush_tss();
 }
 
+void kstack_update(uintptr_t sp) {
+    tss->esp0 = (uint32_t)sp;
+}
+
 void arch_init() {
     serial_init();
     isr_init();

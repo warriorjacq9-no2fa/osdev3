@@ -4,6 +4,11 @@
 #include <stdarg.h>
 #include <stdint.h>
 
+#ifndef __has_include
+#warning "This compiler does not support __has_include, some features will be missing"
+#define __has_include(x) 0
+#endif
+
 enum fg_color {
     FG_BLACK,
     FG_BLUE,
