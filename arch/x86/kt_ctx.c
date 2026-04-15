@@ -31,7 +31,7 @@ void kt_init_context(kt_context_t *ctx, void *arg, char priv) {
     // ESP->EIP
     if(priv != PRIV_KERNEL) {
         *--sp = sel_data;
-        *--sp = (uint32_t)stack_top;
+        *--sp = (uint32_t)(stack_top - 2);
     }
     *--sp = 0x0202;
     *--sp = sel_code;
