@@ -1,7 +1,7 @@
 #include <ctx.h>
 #include <kernel/klog.h>
 
-void kt_init_context(kt_context_t *ctx, void *arg, char priv) {
+void kt_init_context(kt_context_t *ctx, char priv) {
     uint32_t *stack_top = (uint32_t *)((uint8_t *)ctx->stack_base + THREAD_STACK_SIZE);
     uint32_t *sp = stack_top;
 
@@ -19,8 +19,9 @@ void kt_init_context(kt_context_t *ctx, void *arg, char priv) {
             break;
     }
 
-    *--sp = (uint32_t)arg;
-    *--sp = (uint32_t)kthread_ret;
+    *--sp = (uint32_t)ctx->arg;
+    if(priv == PRIV_KERNEL) *--sp = (uint32_t)kthread_ret;
+    else *--sp = 0;
 
     // Fake an IRET frame
     // (p) means privilege switch

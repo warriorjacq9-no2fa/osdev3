@@ -21,7 +21,7 @@ void kmain() {
     arch_init();
     kheap_init();
     usermode_init();
-    kthread_init(3);
+    kthread_init(16);
     kevent_init(16, 8);
     ata_init();
     kevent_consumer_t consumer = {

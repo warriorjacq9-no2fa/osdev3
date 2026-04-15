@@ -1,6 +1,6 @@
 CC = i386-elf-gcc
 CFLAGS ?= \
--I../include \
+-I../include -I../arch/x86/include \
 -ffreestanding -fno-stack-protector \
 -fno-pic \
 -Os -march=i386 -m32 \
