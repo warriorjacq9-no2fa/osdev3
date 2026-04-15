@@ -4,7 +4,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define KCALL_PRINT 1
+#define KCALL_EXIT  1
+#define KCALL_PRINT 2
 
 void kcall(
     size_t id,

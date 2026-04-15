@@ -34,7 +34,7 @@ int kthread_create(size_t *fd, kthread_t thread, void* arg, char priv) {
     lock();
     size_t t;
     for(t = 0; t < max_t; t++) {
-        if(ctx_buf[t].state == TS_DONE || ctx_buf[t].state == TS_UNUSED) break;
+        if(ctx_buf[t].state == TS_UNUSED) break;
     }
     if(t >= max_t) {
         kprintf(LOG_WARN, "kthread", "Thread limit reached\r\n");
@@ -95,5 +95,6 @@ void kthread_schedule(uintptr_t **curr_sp, uintptr_t **next_sp) {
 void kthread_ret() {
     kt_context_t *ctx = &ctx_buf[c_thread];
     ctx->state = TS_DONE;
+    kprintf(LOG_INFO, "kthread", "Thread %u exited\r\n", c_thread);
     while(1) wait();
 }
