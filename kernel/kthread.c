@@ -56,8 +56,8 @@ int kthread_create(size_t *fd, kthread_t thread, void* arg, char priv) {
     ctx->kstack_base = kbase;
     ctx->ksp = (uintptr_t)kbase + THREAD_STACK_SIZE;
     kt_init_context(ctx, arg, priv);
-    kprintf(LOG_INFO, "kthread", "Added thread at index %u, with stack at %p (sp 0x%08X), function at %p\r\n",
-        t, base, ctx->sp, thread
+    kprintf(LOG_INFO, "kthread", "Added thread at index %u, with sp 0x%08X (ksp 0x%08X), function at %p\r\n",
+        t, ctx->sp, ctx->ksp, thread
     );
     *fd = t;
     has_thread = true;
@@ -88,7 +88,6 @@ void kthread_schedule(uintptr_t **curr_sp, uintptr_t **next_sp) {
     kstack_update(ctx_buf[tn].ksp);
     *curr_sp = &ctx_buf[c_thread].sp;
     *next_sp = &ctx_buf[tn].sp;
-    kprintf(LOG_INFO, "kthread", "Scheduled %d -> %d (%p)\r\n", c_thread, tn, ctx_buf[tn].sp);
     c_thread = tn;
 }
 

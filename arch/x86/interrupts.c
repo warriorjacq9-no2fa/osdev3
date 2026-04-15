@@ -99,7 +99,7 @@ void isr_init() {
 }
 
 void exception_handler(iframe_t *iframe) {
-    if(iframe->vector > 31) {
+    if(iframe->vector > 31 && iframe->vector < 128) {
         switch(iframe->vector - 32) {
             // Timer IRQ is in assembly
             case 1: // Keyboard IRQ
@@ -108,11 +108,10 @@ void exception_handler(iframe_t *iframe) {
             case 4: // COM1
                 serial_irq();
                 break;
-            case 0x60: // Syscall
-                kcall_proc(iframe->r.eax, iframe->r.ebx, iframe->r.ecx, iframe->r.edx, iframe->r.edi);
-                break;
         }
         pic_eoi(iframe->vector - 32);
+    } else if(iframe->vector == 0x80) { // Syscall
+            kcall_proc(iframe->r.eax, iframe->r.ebx, iframe->r.ecx, iframe->r.edx, iframe->r.edi);
     } else {
         if(iframe->vector == 0xE)
             if(!page_fault(get_cr2(), iframe->err_code)) return;

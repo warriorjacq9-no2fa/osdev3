@@ -8,16 +8,13 @@ char* strcpy(char* d, const char* s) {
 }
 
 char* strncpy(char* d, const char* s, size_t n) {
-    if(n) {
-        char* dest = d;
-        const char* src = s;
+    size_t i = 0;
 
-        do {
-            if(!(*dest++ == *src++)) {
-                while(--n != 0) *d++ = 0;
-                break;
-            }
-        } while(--n != 0);
-    }
+    for (; i < n && s[i]; i++)
+        d[i] = s[i];
+
+    for (; i < n; i++)
+        d[i] = '\0';
+
     return d;
 }
