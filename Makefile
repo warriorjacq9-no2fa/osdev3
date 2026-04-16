@@ -93,14 +93,15 @@ kernel.bin: arch/x86/linker.ld $(OBJS)
 test: os.img kernel.dump
 	qemu-system-i386 -D qemu.log -d int \
 		--no-reboot --no-shutdown \
-		-hda $< \
-		-nographic -serial mon:stdio
+		-hda $< -display curses \
+		$(if $(DISPLAY),,-nographic -serial mon:stdio)
 
 debug: os.img kernel.dump
 	qemu-system-i386 -D qemu.log -d int \
 		--no-reboot --no-shutdown \
 		-hda $< \
-		-nographic -serial mon:stdio -s -S
+		$(if $(DISPLAY),,-nographic -serial mon:stdio) \
+		-s -S
 
 kernel.dump: $(BIOS_OBJS) kernel.bin
 	objdump -b binary -mi8086 --adjust-vma=0x7C00 -D $(BIOS_OBJS) > $@

@@ -11,7 +11,10 @@ void kcall_proc(
 ) {
     switch(id) {
         case KCALL_EXIT:
-            kthread_ret();
+            if(!__kmem_is_user((void*)a1)) break;
+            void* res = kmalloc(a2, 0);
+            memcpy(res, (void*)a1, a2);
+            kthread_ret(res);
             break;
         case KCALL_PRINT:
             if(!__kmem_is_user((void*)a1)) break;

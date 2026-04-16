@@ -18,7 +18,7 @@ enum ktask_state {
 
 typedef struct kt_context {
     kthread_t thread;
-    unsigned char state;
+    volatile unsigned char state;
     void* arg;
     void* res;
 
@@ -27,10 +27,10 @@ typedef struct kt_context {
     uintptr_t sp, ksp;
 } kt_context_t;
 
-void kthread_ret();
+void kthread_ret(void* res);
 int kthread_create(size_t *fd, kthread_t thread, void* arg, char priv);
 void kthread_schedule(uintptr_t **curr_sp, uintptr_t **next_sp);
 int kthread_init(size_t max_threads);
-void kthread(kt_context_t *ctx);
+void* kthread_join(size_t fd);
 
 #endif

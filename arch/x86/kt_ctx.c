@@ -20,8 +20,7 @@ void kt_init_context(kt_context_t *ctx, char priv) {
     }
 
     *--sp = (uint32_t)ctx->arg;
-    if(priv == PRIV_KERNEL) *--sp = (uint32_t)kthread_ret;
-    else *--sp = 0;
+    *--sp = 0;
 
     // Fake an IRET frame
     // (p) means privilege switch

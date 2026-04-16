@@ -93,14 +93,14 @@ void kthread_schedule(uintptr_t **curr_sp, uintptr_t **next_sp) {
     c_thread = tn;
 }
 
-void kthread(kt_context_t *ctx) {
-    ctx->res = ctx->thread(ctx->arg);
-    while(1) wait();
+void* kthread_join(size_t fd) {
+    while(ctx_buf[fd].state == TS_RUNNING);
+    return ctx_buf[fd].res;
 }
 
-// This function is returned to by an exiting thread
-void kthread_ret() {
+void kthread_ret(void* res) {
     kt_context_t *ctx = &ctx_buf[c_thread];
     ctx->state = TS_DONE;
+    ctx->res = res;
     kprintf(LOG_INFO, "kthread", "Thread %u exited\r\n", c_thread);
 }

@@ -39,8 +39,10 @@ void kmain() {
     ata_read((32768 + 512) / 512, 2, (uint16_t*)ubuf);
     kprintf(LOG_INFO, "kernel", "Read user binary\r\n");
 
-    kthread_create(&ufd, (kthread_t)ubuf, NULL, PRIV_USER);
+    kthread_create(&ufd, (kthread_t)ubuf, (void*)0x1BADB002, PRIV_USER);
     kprintf(LOG_INFO, "kernel", "Ran user binary\r\n");
+    void* res = kthread_join(ufd);
+    kprintf(LOG_INFO, "kernel", "User binary returned %s\r\n", res);
 
     while(1) wait();
 }
