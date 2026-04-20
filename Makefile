@@ -31,6 +31,7 @@ drivers/pit.o \
 drivers/ps2.o \
 drivers/serial.o \
 drivers/vga.o \
+fs/ext2.o \
 kernel/kcall.o \
 kernel/kernel.o \
 kernel/kevent.o \
@@ -63,6 +64,8 @@ include/drivers/pit.h \
 include/drivers/ps2.h \
 include/drivers/serial.h \
 include/drivers/vga.h \
+include/fs/ext2.h \
+include/fs/vfs.h \
 include/kernel/kcall.h \
 include/kernel/kevent.h \
 include/kernel/klog.h \
@@ -90,22 +93,26 @@ kernel.bin: arch/x86/linker.ld $(OBJS)
 	cp $(basename $@).obj $@
 	truncate -s 32K $@
 
-test: os.img kernel.dump
+test: os.img kernel.dump disk.img
 	qemu-system-i386 -D qemu.log -d int \
 		--no-reboot --no-shutdown \
-		-hda $< -display curses \
+		-fda $< -hda disk.img \
 		$(if $(DISPLAY),,-nographic -serial mon:stdio)
 
-debug: os.img kernel.dump
+debug: os.img kernel.dump disk.img
 	qemu-system-i386 -D qemu.log -d int \
 		--no-reboot --no-shutdown \
-		-hda $< \
+		-fda $< -hda disk.img \
 		$(if $(DISPLAY),,-nographic -serial mon:stdio) \
 		-s -S
 
 kernel.dump: $(BIOS_OBJS) kernel.bin
 	objdump -b binary -mi8086 --adjust-vma=0x7C00 -D $(BIOS_OBJS) > $@
 	i386-elf-objdump -S kernel.elf >> $@
+
+disk.img:
+	qemu-img create -f raw $@ 1G
+	mkfs.ext2 $@
 
 %.o: %.S
 	$(AS) $(AFLAGS) $< -o $@
@@ -118,4 +125,4 @@ kernel.dump: $(BIOS_OBJS) kernel.bin
 
 clean:
 	$(MAKE) -C usr clean
-	rm -f kernel.dump os.img $(OBJS) kernel.bin kernel.elf kernel.obj kernel.map boot/bios/boot.o qemu.log
+	rm -f kernel.dump os.img disk.img $(OBJS) kernel.bin kernel.elf kernel.obj kernel.map boot/bios/boot.o qemu.log

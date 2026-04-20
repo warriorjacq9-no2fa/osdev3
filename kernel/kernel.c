@@ -7,6 +7,7 @@
 #include <kernel/kmalloc.h>
 #include <kernel/kthread.h>
 #include <drivers/ata.h>
+#include <fs/ext2.h>
 #include <mm.h>
 #include <arch.h>
 
@@ -32,17 +33,12 @@ void kmain() {
         kprintf(LOG_ERR, "kernel", "Failed to register consumer for char event\r\n");
         return;
     }
-    size_t efd, ufd;
+    size_t efd;
     kthread_create(&efd, kevent_proc, NULL, PRIV_KERNEL);
     kprintf(LOG_INFO, "kernel", "Hello world!\r\n");
-    void* ubuf = kmalloc(1024, MEM_USER);
-    ata_read((32768 + 512) / 512, 2, (uint16_t*)ubuf);
-    kprintf(LOG_INFO, "kernel", "Read user binary\r\n");
 
-    kthread_create(&ufd, (kthread_t)ubuf, (void*)0x1BADB002, PRIV_USER);
-    kprintf(LOG_INFO, "kernel", "Ran user binary\r\n");
-    void* res = kthread_join(ufd);
-    kprintf(LOG_INFO, "kernel", "User binary returned %s\r\n", res);
+    if(ext2_init(ata_read, 0))
+        kprintf(LOG_WARN, "kernel", "ext2_init returned 1");
 
     while(1) wait();
 }

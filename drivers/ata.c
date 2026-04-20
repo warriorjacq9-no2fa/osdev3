@@ -1,4 +1,5 @@
 #include <drivers/ata.h>
+#include <kernel/kmalloc.h>
 #include <kernel/klog.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -97,13 +98,15 @@ int ata_init() {
 
 /* ================== READ ================== */
 
-void ata_read(uint32_t lba, uint8_t sectors, uint16_t* buf) {
-    if (!drive_present) {
-        memset(buf, 0, sectors * 512);
-        return;
-    }
+int ata_read(void* buf, size_t seek, size_t size) {
+    uint32_t offset = seek % 512;
+    uint32_t sectors = (offset + size + 511) / 512;
+    uint32_t lba = seek / 512;
 
-    if (!ata_wait_busy()) return;
+    if (!drive_present) return 1;
+    if (!ata_wait_busy()) return 1;
+
+    uint16_t *dbuf = (uint16_t*)kmalloc(sectors * 512, 0);
 
     outb(ATA_DRIVE, 0xE0 | ((lba >> 24) & 0x0F));
     ata_delay();
@@ -115,16 +118,20 @@ void ata_read(uint32_t lba, uint8_t sectors, uint16_t* buf) {
 
     outb(ATA_CMD, 0x20); // READ PIO
 
-    for (int s = 0; s < sectors; s++) {
+    for (uint32_t s = 0; s < sectors; s++) {
         if (!ata_wait_busy() || !ata_wait_drq()) {
-            kprintf(LOG_ERR, "ata", "Read error\n");
-            return;
+            kprintf(LOG_ERR, "ata", "Read error\r\n");
+            return 1;
         }
 
         for (int i = 0; i < 256; i++) {
-            buf[s * 256 + i] = inw(ATA_DATA);
+            dbuf[s * 256 + i] = inw(ATA_DATA);
         }
     }
+
+    memcpy(buf, (void*)((char*)dbuf + (seek - (lba * 512))), size);
+    kfree((void*)dbuf);
+    return 0;
 }
 
 /* ================== WRITE ================== */

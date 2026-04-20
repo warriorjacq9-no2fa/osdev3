@@ -2,6 +2,7 @@
 #define D_ATA_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 #define ATA_DATA    0x1F0
 #define ATA_ERR     0x1F1
@@ -24,7 +25,7 @@ enum ata_disk {
 };
 
 int ata_init();
-void ata_read(uint32_t lba, uint8_t sectors, uint16_t* buf);
+int ata_read(void* buf, size_t seek, size_t size);
 void ata_write(uint32_t lba, uint8_t sectors, uint16_t* buffer);
 
 #endif
