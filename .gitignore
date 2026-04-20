@@ -7,3 +7,4 @@
 *.map
 *.log
 .vscode/*
+disk/*

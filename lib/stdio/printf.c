@@ -17,11 +17,13 @@ char* __int_str(intmax_t i, char b[], int base, bool plusSignIfNeeded,
     char digit[32] = {0};
     strcpy(digit, "0123456789");
 
+    if (base == 8)
+        strcpy(digit, "01234567");
     if (base == 16)
-        strcat(digit, "ABCDEF");
+        strcpy(digit, "0123456789ABCDEF");
     else if (base == 17)
     {
-        strcat(digit, "abcdef");
+        strcpy(digit, "0123456789abcdef");
         base = 16;
     }
 
@@ -235,7 +237,8 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
         }
 
         if (specifier == 'd' || specifier == 'i' ||
-            specifier == 'u' || specifier == 'x' || specifier == 'X')
+            specifier == 'u' ||
+            specifier == 'x' || specifier == 'X')
         {
             if (specifier == 'x')
                 base = 17;
