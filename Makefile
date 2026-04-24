@@ -48,6 +48,7 @@ lib/string/memmove.o \
 lib/string/memset.o \
 lib/string/strcat.o \
 lib/string/strchr.o \
+lib/string/strcmp.o \
 lib/string/strcpy.o \
 lib/string/strlen.o \
 lib/string/strspn.o \

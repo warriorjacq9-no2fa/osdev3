@@ -32,9 +32,8 @@ ext2_inode_t* get_inode(size_t in) {
     return inode;
 }
 
-void* inode_get_data(ext2_inode_t* inode, size_t *size) {
-    *size = inode->r0_size;
-    void* buf = kmalloc(*size, 0);
+void* inode_get_data(ext2_inode_t* inode) {
+    void* buf = kmalloc(inode->r0_size, 0);
     for(int i = 0; i < 12 && inode->block[i]; i++) {
         if(read(buf + i * BLOCK_SIZE, block_offset(inode->block[i]), BLOCK_SIZE)) return NULL;
     }
@@ -85,15 +84,14 @@ void ext2_print(size_t in) {
         kprintf(LOG_WARN, "ext2", "Not a directory: %u\r\n", in, inode->mode);
         return;
     }
-    size_t size;
-    ext2_dir_entry_t* dir = (ext2_dir_entry_t*)inode_get_data(inode, &size);
+    ext2_dir_entry_t* dir = (ext2_dir_entry_t*)inode_get_data(inode);
     if(dir == NULL) return;
     while(dir->inode) {
         ext2_inode_t* i = get_inode(dir->inode);
         char mode[11];
         mode_to_string(i->mode, mode);
         printf("%s %u %04u %04u % 8u %.*s\r\n",
-            mode, i->links_count, i->uid, i->gid, i->blocks * 512,
+            mode, i->links_count, i->uid, i->gid, i->r0_size,
             dir->name_len, dir->name
         );
         kfree(i);
@@ -108,8 +106,7 @@ void ext2_print_tree(size_t in, int d) {
         kprintf(LOG_WARN, "ext2", "Not a directory: %u\r\n", in, inode->mode);
         return;
     }
-    size_t size;
-    ext2_dir_entry_t* dir = (ext2_dir_entry_t*)inode_get_data(inode, &size);
+    ext2_dir_entry_t* dir = (ext2_dir_entry_t*)inode_get_data(inode);
     if(dir == NULL) return;
     while(dir->inode) {
         if(dir->name[0] != '.') {
@@ -118,7 +115,7 @@ void ext2_print_tree(size_t in, int d) {
             char mode[11];
             mode_to_string(i->mode, mode);
             printf("%s %u %04u %04u % 8u %.*s\r\n",
-                mode, i->links_count, i->uid, i->gid, i->blocks * 512,
+                mode, i->links_count, i->uid, i->gid, i->r0_size,
                 dir->name_len, dir->name
             );
             if(i->mode & EXT2_S_IFDIR) {
@@ -163,4 +160,37 @@ int ext2_init(bdev_read_t _read, size_t _vol_start) {
         return 1;
     ext2_print_tree(EXT2_ROOT_INO, 0);
     return 0;
+}
+
+ext2_inode_t* lookup_inode(ext2_inode_t* i_dir, char* name) {
+    ext2_dir_entry_t* dir = (ext2_dir_entry_t*) inode_get_data(i_dir);
+    ext2_dir_entry_t* d = dir;
+    while(d->inode) {
+        if(strcmp(d->name, name) == 0) {
+            ext2_inode_t* res = get_inode(d->inode);
+            kfree(dir);
+            return res;
+        } else {
+            d = (ext2_dir_entry_t*)((uint8_t*)d + d->rec_len);
+            if((uint8_t*)d >= (uint8_t*)dir + i_dir->r0_size) return NULL;
+        }
+    }
+}
+
+ext2_inode_t* get_fp(char* filepath) {
+    char* path = strdup(filepath);
+    ext2_inode_t* i = get_inode(EXT2_ROOT_INO);
+    ext2_inode_t* i_next;
+    char* save;
+    char* tok = strtok_r(path, "/", &save);
+    while(tok != NULL && i != NULL) {
+        char* next = strtok_r(NULL, "/", &save);
+        i_next = lookup_inode(i, tok);
+        kfree(i);
+        i = i_next;
+        tok = next;
+    }
+
+    kfree(path);
+    return i;
 }
