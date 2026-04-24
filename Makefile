@@ -50,6 +50,8 @@ lib/string/strcat.o \
 lib/string/strchr.o \
 lib/string/strcpy.o \
 lib/string/strlen.o \
+lib/string/strspn.o \
+lib/string/strtok.o
 
 HEADERS = \
 arch/x86/include/arch.h \

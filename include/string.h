@@ -13,5 +13,7 @@ char* strcpy(char* d, const char* s);
 char* strncpy(char* d, const char* s, size_t n);
 size_t strlen(const char* s);
 size_t strnlen(const char* s, size_t n);
+size_t strspn(const char* s, const char* accept);
+size_t strcspn(const char* s, const char* reject);
 
 #endif
