@@ -34,8 +34,9 @@ ext2_inode_t* get_inode(size_t in) {
     return inode;
 }
 
+// TODO: better inode_get_data
 void* inode_get_data(ext2_inode_t* inode) {
-    void* buf = kmalloc(inode->r0_size, 0);
+    void* buf = kmalloc(inode->blocks * BLOCK_SIZE, 0);
     for(int i = 0; i < 12 && inode->block[i]; i++) {
         if(read(buf + i * BLOCK_SIZE, block_offset(inode->block[i]), BLOCK_SIZE)) return NULL;
     }
@@ -89,6 +90,8 @@ void ext2_print(size_t in) {
     ext2_dir_entry_t* dir = (ext2_dir_entry_t*)inode_get_data(inode);
     if(dir == NULL) return;
     while(dir->inode) {
+        if(dir->rec_len < 8 || dir->rec_len % 4 != 0)
+            break;
         ext2_inode_t* i = get_inode(dir->inode);
         char mode[11];
         mode_to_string(i->mode, mode);
@@ -109,6 +112,8 @@ void ext2_print_tree(ext2_inode_t* inode, int d) {
     ext2_dir_entry_t* dir = (ext2_dir_entry_t*)inode_get_data(inode);
     if(dir == NULL) return;
     while(dir->inode) {
+        if(dir->rec_len < 8 || dir->rec_len % 4 != 0)
+            break;
         if(dir->name[0] != '.') {
             for(int i = 0; i < d; i++) printf("    ");
             ext2_inode_t* i = get_inode(dir->inode);
@@ -120,8 +125,8 @@ void ext2_print_tree(ext2_inode_t* inode, int d) {
             );
             if(i->mode & EXT2_S_IFDIR) {
                 ext2_print_tree(i, d + 1);
-                kfree(i);
             }
+            kfree(i);
         }
         dir = (ext2_dir_entry_t*)((uint8_t*)dir + dir->rec_len);
     }
@@ -134,7 +139,7 @@ int ext2_init(bdev_read_t _read, size_t _vol_start) {
     sb = kmalloc(sizeof(ext2_sb_t), 0);
     if(read((void*)sb, vol_start + 1024, sizeof(ext2_sb_t))) return 1;
     if(sb->magic != EXT2_SUPER_MAGIC) {
-        kprintf(LOG_ERR, "ext2", "Invalid magic");
+        kprintf(LOG_ERR, "ext2", "Invalid magic\r\n");
         return 1;
     }
     if(sb->rev_level >= 1) {
