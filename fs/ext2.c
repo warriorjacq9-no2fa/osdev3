@@ -12,6 +12,8 @@ static bdev_read_t read;
 
 #define BLOCK_SIZE (1024 << sb->log_block_size)
 
+ext2_inode_t* get_fp(char* filepath);
+
 static inline size_t block_offset(size_t block) {
     return vol_start + block * BLOCK_SIZE;
 }
@@ -99,11 +101,9 @@ void ext2_print(size_t in) {
     }
 }
 
-void ext2_print_tree(size_t in, int d) {
-    ext2_inode_t* inode = get_inode(in);
-
+void ext2_print_tree(ext2_inode_t* inode, int d) {
     if(!(inode->mode & EIT_DIR)) {
-        kprintf(LOG_WARN, "ext2", "Not a directory: %u\r\n", in, inode->mode);
+        kprintf(LOG_WARN, "ext2", "Not a directory: %u\r\n", inode->mode);
         return;
     }
     ext2_dir_entry_t* dir = (ext2_dir_entry_t*)inode_get_data(inode);
@@ -119,8 +119,8 @@ void ext2_print_tree(size_t in, int d) {
                 dir->name_len, dir->name
             );
             if(i->mode & EXT2_S_IFDIR) {
+                ext2_print_tree(i, d + 1);
                 kfree(i);
-                ext2_print_tree(dir->inode, d + 1);
             }
         }
         dir = (ext2_dir_entry_t*)((uint8_t*)dir + dir->rec_len);
@@ -158,7 +158,7 @@ int ext2_init(bdev_read_t _read, size_t _vol_start) {
     bgdesc_table = kmalloc(bgdt_size, 0);
     if(read((void*)bgdesc_table, block_offset(bgdt_block), bgdt_size))
         return 1;
-    ext2_print_tree(EXT2_ROOT_INO, 0);
+    ext2_print_tree(get_inode(EXT2_ROOT_INO), 0);
     return 0;
 }
 
@@ -175,6 +175,7 @@ ext2_inode_t* lookup_inode(ext2_inode_t* i_dir, char* name) {
             if((uint8_t*)d >= (uint8_t*)dir + i_dir->r0_size) return NULL;
         }
     }
+    return NULL;
 }
 
 ext2_inode_t* get_fp(char* filepath) {

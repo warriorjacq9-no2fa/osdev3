@@ -13,7 +13,7 @@ char* strcpy(char* d, const char* s);
 char* strncpy(char* d, const char* s, size_t n);
 size_t strlen(const char* s);
 size_t strnlen(const char* s, size_t n);
-size_t strspn(const char* s, const char* accept);
+size_t strspn(char* s, const char* accept);
 size_t strcspn(const char* s, const char* reject);
 int strcmp(const char* s1, const char* s2);
 char* strtok_r(char* s, const char* delim, char** save_ptr);
