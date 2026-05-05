@@ -114,13 +114,14 @@ void ext2_print_tree(ext2_inode_t* inode, int d) {
         return;
     }
     ext2_dir_entry_t* dir = (ext2_dir_entry_t*)inode_get_data(inode);
+    uint8_t* base = (uint8_t*)dir;
     while(dir && dir->inode) {
         if(dir->rec_len < 8 || dir->rec_len % 4 != 0)
             break;
         if(dir->name[0] != '.') {
             for(int i = 0; i < d; i++) printf("    ");
             ext2_inode_t* i = get_inode(dir->inode);
-            if(i == NULL) continue;
+            if(i == NULL) break;
             char mode[11];
             mode_to_string(i->mode, mode);
             printf("%s %u %04u %04u % 8u %.*s\r\n",
@@ -133,8 +134,9 @@ void ext2_print_tree(ext2_inode_t* inode, int d) {
             kfree(i);
         }
         dir = (ext2_dir_entry_t*)((uint8_t*)dir + dir->rec_len);
+        if((uint8_t*)dir > base + inode->r0_size) break;
     }
-    kfree(dir);
+    kfree(base);
 }
 
 ext2_inode_t* lookup_inode(ext2_inode_t* i_dir, char* name) {
