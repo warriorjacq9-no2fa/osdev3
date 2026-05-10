@@ -1,14 +1,18 @@
 #include <fs/ext2.h>
 #include <kernel/kmalloc.h>
 #include <kernel/klog.h>
+#include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 static ext2_sb_t *sb;
 static ext2_sb_ext_t *ext_sb;
 static ext2_bgdesc_t *bgdesc_table;
 static size_t vol_start;
 static bdev_read_t read;
+
+static vops_t ops;
 
 #define BLOCK_SIZE (1024 << sb->log_block_size)
 
@@ -41,102 +45,6 @@ void* inode_get_data(ext2_inode_t* inode) {
         if(read(buf + i * BLOCK_SIZE, block_offset(inode->block[i]), BLOCK_SIZE)) return NULL;
     }
     return buf;
-}
-
-void mode_to_string(unsigned short mode, char str[11]) {
-    // File type
-    if (mode & EXT2_S_IFREG)  str[0] = '-';
-    else if (mode & EXT2_S_IFDIR) str[0] = 'd';
-    else if (mode & EXT2_S_IFLNK) str[0] = 'l';
-    else if (mode & EXT2_S_IFCHR) str[0] = 'c';
-    else if (mode & EXT2_S_IFBLK) str[0] = 'b';
-    else if (mode & EXT2_S_IFIFO) str[0] = 'p';
-    else if (mode & EXT2_S_IFSOCK) str[0] = 's';
-    else str[0] = '?';
-
-    // Owner
-    str[1] = (mode & EXT2_S_IRUSR) ? 'r' : '-';
-    str[2] = (mode & EXT2_S_IWUSR) ? 'w' : '-';
-    str[3] = (mode & EXT2_S_IXUSR) ? 'x' : '-';
-
-    // Group
-    str[4] = (mode & EXT2_S_IRGRP) ? 'r' : '-';
-    str[5] = (mode & EXT2_S_IWGRP) ? 'w' : '-';
-    str[6] = (mode & EXT2_S_IXGRP) ? 'x' : '-';
-
-    // Others
-    str[7] = (mode & EXT2_S_IROTH) ? 'r' : '-';
-    str[8] = (mode & EXT2_S_IWOTH) ? 'w' : '-';
-    str[9] = (mode & EXT2_S_IXOTH) ? 'x' : '-';
-
-    // Special bits
-    if (mode & EXT2_S_ISUID)
-        str[3] = (str[3] == 'x') ? 's' : 'S';
-    if (mode & EXT2_S_ISGID)
-        str[6] = (str[6] == 'x') ? 's' : 'S';
-    if (mode & EXT2_S_ISVTX)
-        str[9] = (str[9] == 'x') ? 't' : 'T';
-
-    str[10] = '\0';
-}
-
-void ext2_print(size_t in) {
-    ext2_inode_t* inode = get_inode(in);
-
-    if(!(inode->mode & EIT_DIR)) {
-        kprintf(LOG_WARN, "ext2", "Not a directory: %u\r\n", in, inode->mode);
-        return;
-    }
-    ext2_dir_entry_t* dir = (ext2_dir_entry_t*)inode_get_data(inode);
-    if(dir == NULL) return;
-    while(dir->inode) {
-        if(dir->rec_len < 8 || dir->rec_len % 4 != 0)
-            break;
-        ext2_inode_t* i = get_inode(dir->inode);
-        char mode[11];
-        mode_to_string(i->mode, mode);
-        printf("%s %u %04u %04u % 8u %.*s\r\n",
-            mode, i->links_count, i->uid, i->gid, i->r0_size,
-            dir->name_len, dir->name
-        );
-        kfree(i);
-        dir = (ext2_dir_entry_t*)((uint8_t*)dir + dir->rec_len);
-    }
-}
-
-void ext2_print_tree(ext2_inode_t* inode, int d) {
-    if(!inode) {
-        kprintf(LOG_WARN, "ext2", "Inode is null\r\n");
-        return;
-    }
-    if(!(inode->mode & EIT_DIR)) {
-        kprintf(LOG_WARN, "ext2", "Not a directory: %u\r\n", inode->mode);
-        return;
-    }
-    ext2_dir_entry_t* dir = (ext2_dir_entry_t*)inode_get_data(inode);
-    uint8_t* base = (uint8_t*)dir;
-    while(dir && dir->inode) {
-        if(dir->rec_len < 8 || dir->rec_len % 4 != 0)
-            break;
-        if(dir->name[0] != '.') {
-            for(int i = 0; i < d; i++) printf("    ");
-            ext2_inode_t* i = get_inode(dir->inode);
-            if(i == NULL) break;
-            char mode[11];
-            mode_to_string(i->mode, mode);
-            printf("%s %u %04u %04u % 8u %.*s\r\n",
-                mode, i->links_count, i->uid, i->gid, i->r0_size,
-                dir->name_len, dir->name
-            );
-            if(i->mode & EXT2_S_IFDIR) {
-                ext2_print_tree(i, d + 1);
-            }
-            kfree(i);
-        }
-        dir = (ext2_dir_entry_t*)((uint8_t*)dir + dir->rec_len);
-        if((uint8_t*)dir > base + inode->r0_size) break;
-    }
-    kfree(base);
 }
 
 ext2_inode_t* lookup_inode(ext2_inode_t* i_dir, char* name) {
@@ -178,6 +86,42 @@ ext2_inode_t* get_fp(char* filepath) {
     return i;
 }
 
+int ext2_open(vnode_t* node, const char* filename, int flags, ...) {
+    ext2_inode_t* inode = get_fp(filename);
+
+    const bool create = (flags & (O_CREAT | O_TMPFILE)) != 0;
+
+    // File does not exist
+    if (inode == NULL) {
+        if (!create)
+            return -1;
+
+        // TODO: writing
+    } else if (flags & O_EXCL) {
+        return -1;
+    }
+
+    node->flags = flags;
+    node->private = inode;
+    node->ops = &ops;
+
+    if (create) {
+        va_list ap;
+        va_start(ap, flags);
+        node->mode = va_arg(ap, int);
+        va_end(ap);
+    } else {
+        node->mode = inode->mode;
+    }
+
+    return 0;
+}
+
+int ext2_close(vnode_t* node) {
+    if(node->private) kfree(node->private); // TODO: ext2_free
+    return 0;
+}
+
 int ext2_init(bdev_read_t _read, size_t _vol_start) {
     vol_start = _vol_start;
     read = _read;
@@ -208,7 +152,5 @@ int ext2_init(bdev_read_t _read, size_t _vol_start) {
     bgdesc_table = kmalloc(bgdt_size, 0);
     if(read((void*)bgdesc_table, block_offset(bgdt_block), bgdt_size))
         return 1;
-    ext2_print_tree(get_inode(EXT2_ROOT_INO), 0);
-    //ext2_print_tree(get_fp("arch"), 0);
     return 0;
 }
