@@ -10,6 +10,7 @@
 #include <fs/ext2.h>
 #include <mm.h>
 #include <arch.h>
+#include <fs/vfs.h>
 
 void kconsumer_char(kevent_input_t *evt) {
     putc(evt->ch.character);
@@ -37,8 +38,30 @@ void kmain() {
     kthread_create(&efd, kevent_proc, NULL, PRIV_KERNEL);
     kprintf(LOG_INFO, "kernel", "Hello world!\r\n");
 
-    if(ext2_init(ata_read, 0))
-        kprintf(LOG_WARN, "kernel", "ext2_init returned 1");
+    vops_t* ext2 = ext2_init(ata_read, 0);
 
+    if(ext2 == NULL) {
+        kprintf(LOG_WARN, "kernel", "ext2_init returned null");
+        goto ret;
+    }
+
+    vnode_t fd;
+    int res;
+    if((res = ext2->open(&fd, "/README.md", O_RDONLY)) < 0) {
+        kprintf(LOG_WARN, "kernel", "ext2_open failed with code %d\r\n", res);
+        goto ret;
+    }
+    
+    void* buf = kmalloc(64, 0);
+    if((res = ext2->read(&fd, buf, 63, 0)) < 0) {
+        kprintf(LOG_WARN, "kernel", "ext2_read failed with code %d\r\n", res);
+        goto ret;
+    }
+
+    ((char*)buf)[63] = 0;
+
+    kprintf(LOG_INFO, "kernel", "Read %s\r\n", (char*)buf);
+
+ret:
     while(1) wait();
 }

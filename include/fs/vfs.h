@@ -53,7 +53,7 @@ typedef struct vnode_ops {
 typedef struct vnode {
     vops_t *ops;
     int flags, mode;
-    void* private
+    void* private;
 } vnode_t;
 
 #endif

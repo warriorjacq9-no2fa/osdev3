@@ -252,6 +252,6 @@ typedef struct ext2_dir_entry {
     char        name[];
 } __attribute__((packed)) ext2_dir_entry_t;
 
-int ext2_init(bdev_read_t read, size_t vol_start);
+vops_t* ext2_init(bdev_read_t _read, size_t _vol_start);
 
 #endif
