@@ -258,20 +258,20 @@ int ext2_stat(const char* filename, stat_t* buf) {
     return 0;
 }
 
-vops_t* ext2_init(bdev_read_t _read, size_t _vol_start) {
+int ext2_init(bdev_read_t _read, size_t _vol_start) {
     vol_start = _vol_start;
     read = _read;
     sb = kmalloc(sizeof(ext2_sb_t), 0);
-    if(read((void*)sb, vol_start + 1024, sizeof(ext2_sb_t))) return NULL;
+    if(read((void*)sb, vol_start + 1024, sizeof(ext2_sb_t))) return -1;
     if(sb->magic != EXT2_SUPER_MAGIC) {
         kprintf(LOG_ERR, "ext2", "Invalid magic\r\n");
-        return NULL;
+        return -1;
     }
     if(sb->rev_level >= 1) {
         kprintf(LOG_INFO, "ext2", "Extended superblock is present\r\n");
         ext_sb = kmalloc(sizeof(ext2_sb_ext_t), 0);
         if(read((void*)ext_sb, vol_start + 1024 + sizeof(ext2_sb_t), sizeof(ext2_sb_ext_t)))
-            return NULL;
+            return -1;
     }
     block_size  = (1024 << sb->log_block_size);
     kprintf(
@@ -288,12 +288,11 @@ vops_t* ext2_init(bdev_read_t _read, size_t _vol_start) {
     
     bgdesc_table = kmalloc(bgdt_size, 0);
     if(read((void*)bgdesc_table, block_offset(bgdt_block), bgdt_size))
-        return NULL;
+        return -1;
     
     ops.open = ext2_open;
     ops.close = ext2_close;
     ops.read = ext2_read;
     ops.stat = ext2_stat;
-    
-    return &ops;
+    return 0;
 }

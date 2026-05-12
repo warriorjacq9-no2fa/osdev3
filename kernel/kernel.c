@@ -38,22 +38,21 @@ void kmain() {
     kthread_create(&efd, kevent_proc, NULL, PRIV_KERNEL);
     kprintf(LOG_INFO, "kernel", "Hello world!\r\n");
 
-    vops_t* ext2 = ext2_init(ata_read, 0);
+    int res = ext2_init(ata_read, 0);
 
-    if(ext2 == NULL) {
-        kprintf(LOG_WARN, "kernel", "ext2_init returned null");
+    if(res < 0) {
+        kprintf(LOG_WARN, "kernel", "ext2_init returned error");
         goto ret;
     }
 
     vnode_t fd;
-    int res;
-    if((res = ext2->open(&fd, "/arch/x86/include/ctx.h", O_RDONLY)) < 0) {
+    if((res = ext2_open(&fd, "/arch/x86/include/ctx.h", O_RDONLY)) < 0) {
         kprintf(LOG_WARN, "kernel", "ext2_open failed with code %d\r\n", res);
         goto ret;
     }
     
     void* buf = kmalloc(64, 0);
-    if((res = ext2->read(&fd, buf, 0, 64)) < 0) {
+    if((res = fd.ops->read(&fd, buf, 0, 64)) < 0) {
         kprintf(LOG_WARN, "kernel", "ext2_read failed with code %d\r\n", res);
         goto ret;
     }
