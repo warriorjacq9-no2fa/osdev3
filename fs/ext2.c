@@ -214,6 +214,8 @@ int ext2_open(vnode_t* node, const char* filename, int flags, ...) {
         return -EEXIST;
     }
 
+    if(inode->mode & EXT2_S_IFDIR && flags & O_WRONLY) return -EISDIR;
+
     node->flags = flags;
     node->private = inode;
     node->ops = &ops;
@@ -238,6 +240,22 @@ int ext2_close(vnode_t* node) {
 ssize_t ext2_read(vnode_t* node, void* buf, size_t off, size_t len) {
     if(len == 0) return 0;
     return ext2_read_inode(node->private, buf, off, len);
+}
+
+int ext2_stat(const char* filename, stat_t* buf) {
+    ext2_inode_t* inode = get_fp(filename);
+    buf->st_ino = 0;
+    buf->st_mode = inode->mode;
+    buf->st_nlink = inode->links_count;
+    buf->st_uid = inode->uid;
+    buf->st_gid = inode->gid;
+    buf->st_size = inode->r0_size;
+    buf->st_blksize = block_size;
+    buf->st_blocks = inode->blocks;
+    buf->st_atime = inode->atime;
+    buf->st_mtime = inode->mtime;
+    buf->st_ctime = inode->ctime;
+    return 0;
 }
 
 vops_t* ext2_init(bdev_read_t _read, size_t _vol_start) {
@@ -275,6 +293,7 @@ vops_t* ext2_init(bdev_read_t _read, size_t _vol_start) {
     ops.open = ext2_open;
     ops.close = ext2_close;
     ops.read = ext2_read;
+    ops.stat = ext2_stat;
     
     return &ops;
 }
