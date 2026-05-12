@@ -10,40 +10,49 @@ int isdigit(char c)
     return (c >= '0' && c <= '9');
 }
 
-char* __int_str(intmax_t i, char b[], int base, bool plusSignIfNeeded,
-                bool spaceSignIfNeeded, int paddingNo,
-                bool justify, bool zeroPad)
+char *__int_str(intmax_t value, char b[], int base,
+                bool plusSignIfNeeded,
+                bool spaceSignIfNeeded,
+                int paddingNo,
+                bool justify,
+                bool zeroPad)
 {
     char digit[32] = {0};
-    strcpy(digit, "0123456789");
 
     if (base == 8)
         strcpy(digit, "01234567");
-    if (base == 16)
+    else if (base == 16)
         strcpy(digit, "0123456789ABCDEF");
     else if (base == 17)
     {
         strcpy(digit, "0123456789abcdef");
         base = 16;
     }
+    else
+        strcpy(digit, "0123456789");
 
     char *p = b;
 
-    if (i < 0)
+    uintmax_t magnitude;
+
+    if (value < 0)
     {
         *p++ = '-';
-        i *= -1;
+
+        /* safe absolute value conversion */
+        magnitude = (uintmax_t)(-(value + 1)) + 1;
     }
-    else if (plusSignIfNeeded)
+    else
     {
-        *p++ = '+';
-    }
-    else if (spaceSignIfNeeded)
-    {
-        *p++ = ' ';
+        if (plusSignIfNeeded)
+            *p++ = '+';
+        else if (spaceSignIfNeeded)
+            *p++ = ' ';
+
+        magnitude = (uintmax_t)value;
     }
 
-    intmax_t shifter = i;
+    uintmax_t shifter = magnitude;
 
     do
     {
@@ -55,23 +64,22 @@ char* __int_str(intmax_t i, char b[], int base, bool plusSignIfNeeded,
 
     do
     {
-        *--p = digit[i % base];
-        i /= base;
-    } while (i);
+        *--p = digit[magnitude % base];
+        magnitude /= base;
+    } while (magnitude);
 
     int padding = paddingNo - strlen(b);
+
     if (padding < 0)
         padding = 0;
 
     if (justify)
     {
-
         while (padding--)
             b[strlen(b)] = zeroPad ? '0' : ' ';
     }
     else
     {
-
         char a[256] = {0};
 
         while (padding--)
@@ -105,7 +113,6 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
 
     for (int i = 0; format[i]; i++)
     {
-
         if (format[i] != '%')
         {
             out_char(out, ctx, format[i], &chars);
@@ -130,26 +137,28 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
 
         while (parsing)
         {
-
             switch (format[i])
             {
-
             case '-':
                 leftJustify = true;
                 i++;
                 break;
+
             case '+':
                 plusSign = true;
                 i++;
                 break;
+
             case '#':
                 altForm = true;
                 i++;
                 break;
+
             case ' ':
                 spaceNoSign = true;
                 i++;
                 break;
+
             case '0':
                 zeroPad = true;
                 i++;
@@ -175,7 +184,6 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
 
         if (format[i] == '.')
         {
-
             i++;
             precision = 0;
 
@@ -194,7 +202,6 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
 
         if (strchr("hljztL", format[i]))
         {
-
             length = format[i];
             i++;
 
@@ -228,7 +235,6 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
 
         if (specifier == 'p')
         {
-
             base = 16;
             specifier = 'u';
             length = 'z';
@@ -236,12 +242,60 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
             out_string(out, ctx, "0x", &chars);
         }
 
-        if (specifier == 'd' || specifier == 'i' ||
-            specifier == 'u' ||
-            specifier == 'x' || specifier == 'X')
+        /* signed integers */
+
+        if (specifier == 'd' || specifier == 'i')
+        {
+            intmax_t val = 0;
+
+            switch (length)
+            {
+            case 'H':
+                val = (signed char)va_arg(list, int);
+                break;
+
+            case 'h':
+                val = (short)va_arg(list, int);
+                break;
+
+            case 'l':
+                val = va_arg(list, long);
+                break;
+
+            case 'q':
+                val = va_arg(list, long long);
+                break;
+
+            case 'j':
+                val = va_arg(list, intmax_t);
+                break;
+
+            case 'z':
+                val = (ssize_t)va_arg(list, size_t);
+                break;
+
+            default:
+                val = va_arg(list, int);
+                break;
+            }
+
+            __int_str(val, intStrBuffer, base,
+                      plusSign, spaceNoSign,
+                      width, leftJustify, zeroPad);
+
+            out_string(out, ctx, intStrBuffer, &chars);
+            continue;
+        }
+
+        /* unsigned integers */
+
+        if (specifier == 'u' ||
+            specifier == 'x' ||
+            specifier == 'X')
         {
             if (specifier == 'x')
                 base = 17;
+
             if (specifier == 'X')
                 base = 16;
 
@@ -249,38 +303,38 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
 
             switch (length)
             {
-
             case 'H':
-                val = (unsigned char)va_arg(list, int);
+                val = (unsigned char)va_arg(list, unsigned int);
                 break;
+
             case 'h':
-                val = (unsigned short)va_arg(list, int);
+                val = (unsigned short)va_arg(list, unsigned int);
                 break;
+
             case 'l':
                 val = va_arg(list, unsigned long);
                 break;
+
             case 'q':
                 val = va_arg(list, unsigned long long);
                 break;
+
             case 'j':
                 val = va_arg(list, uintmax_t);
                 break;
+
             case 'z':
                 val = va_arg(list, size_t);
                 break;
+
             default:
                 val = va_arg(list, unsigned int);
                 break;
             }
 
-            if (specifier == 'd' || specifier == 'i')
-                __int_str((intmax_t)val, intStrBuffer, base,
-                          plusSign, spaceNoSign, width,
-                          leftJustify, zeroPad);
-            else
-                __int_str(val, intStrBuffer, base,
-                          plusSign, spaceNoSign, width,
-                          leftJustify, zeroPad);
+            __int_str((intmax_t)val, intStrBuffer, base,
+                      plusSign, spaceNoSign,
+                      width, leftJustify, zeroPad);
 
             out_string(out, ctx, intStrBuffer, &chars);
             continue;
@@ -290,8 +344,8 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
 
         if (specifier == 'c')
         {
-
             char c = (char)va_arg(list, int);
+
             out_char(out, ctx, c, &chars);
             continue;
         }
@@ -301,10 +355,12 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
         if (specifier == 's')
         {
             const char *s = va_arg(list, const char *);
+
             if (!s)
                 s = "(null)";
 
             int len = 0;
+
             while (s[len])
                 len++;
 
@@ -317,11 +373,10 @@ int vformat(out_f out, void *ctx, const char *format, va_list list)
             continue;
         }
 
-        /* % */
+        /* percent */
 
         if (specifier == '%')
         {
-
             out_char(out, ctx, '%', &chars);
             continue;
         }
@@ -359,7 +414,9 @@ int printf(const char *format, ...)
     va_list list;
 
     va_start(list, format);
+
     int r = vformat(stdout_out, NULL, format, list);
+
     va_end(list);
 
     return r;
@@ -381,7 +438,9 @@ int sprintf(char *str, const char *format, ...)
     va_list list;
 
     va_start(list, format);
+
     int r = vsprintf(str, format, list);
+
     va_end(list);
 
     return r;

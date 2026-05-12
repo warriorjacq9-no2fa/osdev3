@@ -4,6 +4,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define EFAIL       1
+#define ENOENT      2
+#define E2BIG       3
+#define EMEM        4
+#define EEXIST      5
+
 #define O_RDONLY    0x0001
 #define O_WRONLY    0x0002
 #define O_RDWR      0x0003

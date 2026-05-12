@@ -1,6 +1,7 @@
 #ifndef FS_EXT2_H
 #define FS_EXT2_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include <fs/vfs.h>
 

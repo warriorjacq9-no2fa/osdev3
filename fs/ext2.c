@@ -23,12 +23,71 @@ static bdev_read_t read;
 
 static vops_t ops;
 
-#define BLOCK_SIZE (1024 << sb->log_block_size)
+static size_t block_size;
 
 ext2_inode_t* get_fp(const char* filepath);
 
 static inline size_t block_offset(size_t block) {
-    return vol_start + block * BLOCK_SIZE;
+    return vol_start + block * block_size;
+}
+
+
+size_t get_block_iter(size_t log_block, size_t bnum, size_t iter) {
+    if(bnum == 0 || iter == 0) return 0;
+    const size_t pointers = block_size / sizeof(uint32_t);
+    uint32_t* ptrs = kmalloc(block_size, 0);
+    if(ptrs == NULL) return 0;
+    if(read((void*)ptrs, block_offset(bnum), block_size)) {
+        kfree(ptrs);
+        return 0;
+    }
+    if(iter == 1) {
+        if(log_block >= pointers) {
+            kfree(ptrs);
+            return 0;
+        }
+        size_t ptr = ptrs[log_block];
+        kfree(ptrs);
+        return ptr;
+    } else {
+        size_t div = 1;
+        for(size_t i = 1; i < iter; i++) div *= pointers;
+        if(log_block / div >= pointers) {
+            kfree(ptrs);
+            return 0;
+        }
+        size_t ptr = ptrs[log_block / div];
+        kfree(ptrs);
+        return get_block_iter(log_block % div, ptr, iter - 1);
+    }
+}
+
+size_t get_block(ext2_inode_t* inode, size_t log_block) {
+    const size_t pointers = block_size / sizeof(uint32_t);
+
+    // Direct blocks
+    if(log_block < 12)
+        return inode->block[log_block];
+
+    log_block -= 12;
+
+    // Singly indirect
+    if(log_block < pointers)
+        return get_block_iter(log_block, inode->block[12], 1);
+
+    log_block -= pointers;
+
+    // Doubly indirect
+    if(log_block < pointers * pointers)
+        return get_block_iter(log_block, inode->block[13], 2);
+
+    log_block -= pointers * pointers;
+
+    // Triply indirect
+    if(log_block < pointers * pointers * pointers)
+        return get_block_iter(log_block, inode->block[14], 3);
+
+    return 0;
 }
 
 ext2_inode_t* get_inode(size_t in) {
@@ -47,27 +106,27 @@ ext2_inode_t* get_inode(size_t in) {
     return inode;
 }
 
-// TODO: better inode_get_data
 ssize_t ext2_read_inode(ext2_inode_t* inode, void* buf, size_t off, size_t len) {
     if(off >= inode->r0_size) return 0;
     if(len > inode->r0_size - off) len = inode->r0_size - off;
 
-    size_t b_off = off / BLOCK_SIZE;
-    size_t r_off = off % BLOCK_SIZE;
+    size_t b_off = off / block_size;
+    size_t r_off = off % block_size;
 
-    if (len > SIZE_MAX - r_off - (BLOCK_SIZE - 1)) return -1;
-    size_t b_len = (len + r_off + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    if (len > SIZE_MAX - r_off - (block_size - 1)) return -E2BIG;
+    size_t b_len = (len + r_off + block_size - 1) / block_size;
 
-    void* b_buf = kmalloc(b_len * BLOCK_SIZE, 0);    
-    if(b_buf == NULL) return -1;
+    void* b_buf = kmalloc(b_len * block_size, 0);    
+    if(b_buf == NULL) return -EMEM;
 
     for(size_t i = 0; i < b_len; i++) {
-        if (inode->block[i + b_off] == 0) {
-            memset(b_buf + i * BLOCK_SIZE, 0, BLOCK_SIZE);
+        size_t block;
+        if((block = get_block(inode, i + b_off)) == 0) {
+            memset(b_buf + i * block_size, 0, block_size);
             continue;
         }
-        if(read(b_buf + i * BLOCK_SIZE, block_offset(inode->block[i + b_off]), BLOCK_SIZE)) {
-            len = i < 1 ? 0 : min(i * BLOCK_SIZE - r_off, len);
+        if(read(b_buf + i * block_size, block_offset(block), block_size)) {
+            len = i < 1 ? 0 : min(i * block_size - r_off, len);
             break;
         }
     }
@@ -79,22 +138,39 @@ ssize_t ext2_read_inode(ext2_inode_t* inode, void* buf, size_t off, size_t len) 
 ext2_inode_t* lookup_inode(ext2_inode_t* i_dir, char* name) {
     if(i_dir == NULL) return NULL;
     ext2_dir_entry_t* dir = (ext2_dir_entry_t*) kmalloc(i_dir->r0_size, 0);
-    if(ext2_read_inode(i_dir, (void*)dir, 0, i_dir->r0_size) < 0) return NULL;
-    ext2_dir_entry_t* d = dir;
-    while(d->inode) {
-        char* d_name = kmalloc(d->name_len, 0);
-        strncpy(d_name, d->name, d->name_len);
-        if(strcmp(d_name, name) == 0) {
-            ext2_inode_t* res = get_inode(d->inode);
-            kfree(dir);
-            return res;
-        } else {
-            d = (ext2_dir_entry_t*)((uint8_t*)d + d->rec_len);
-            if((uint8_t*)d >= (uint8_t*)dir + i_dir->r0_size) {
-                return NULL;
-            }
+    kprintf(LOG_INFO, "ext2", "dir size = %u\n", i_dir->r0_size);
+    if(ext2_read_inode(i_dir, (void*)dir, 0, i_dir->r0_size) != i_dir->r0_size) return NULL;
+    uint8_t* ptr = (uint8_t*)dir;
+    uint8_t* end = ptr + i_dir->r0_size;
+
+    while(ptr < end) {
+        ext2_dir_entry_t* d = (ext2_dir_entry_t*)ptr;
+
+        if(d->rec_len == 0) {
+            kprintf(LOG_WARN, "ext2", "Invalid entry\r\n");
+            break;
         }
+
+        if(d->inode != 0) {
+            char* d_name = kmalloc(d->name_len + 1, 0);
+            memcpy(d_name, d->name, d->name_len);
+            d_name[d->name_len] = '\0';
+
+            kprintf(LOG_INFO, "ext2", "Found %s (need %s)\r\n", d_name, name);
+
+            if(strcmp(d_name, name) == 0) {
+                ext2_inode_t* res = get_inode(d->inode);
+                kfree(d_name);
+                kfree(dir);
+                return res;
+            }
+
+            kfree(d_name);
+        }
+
+        ptr += d->rec_len;
     }
+    kfree(dir);
     return NULL;
 }
 
@@ -124,11 +200,11 @@ int ext2_open(vnode_t* node, const char* filename, int flags, ...) {
     // File does not exist
     if (inode == NULL) {
         if (!create)
-            return -1;
+            return -ENOENT;
 
         // TODO: writing
     } else if (flags & O_EXCL) {
-        return -1;
+        return -EEXIST;
     }
 
     node->flags = flags;
@@ -153,8 +229,8 @@ int ext2_close(vnode_t* node) {
 }
 
 ssize_t ext2_read(vnode_t* node, void* buf, size_t off, size_t len) {
-    if(ext2_read_inode(node->private, buf, off, len)) return -1;
-    return len;
+    if(len == 0) return 0;
+    return ext2_read_inode(node->private, buf, off, len);
 }
 
 vops_t* ext2_init(bdev_read_t _read, size_t _vol_start) {
@@ -172,9 +248,10 @@ vops_t* ext2_init(bdev_read_t _read, size_t _vol_start) {
         if(read((void*)ext_sb, vol_start + 1024 + sizeof(ext2_sb_t), sizeof(ext2_sb_ext_t)))
             return NULL;
     }
+    block_size  = (1024 << sb->log_block_size);
     kprintf(
         LOG_INFO, "ext2", "%u blocks total (%u remaining), size is %u\r\n",
-        sb->blocks_count, sb->free_blocks_count, 1024 << sb->log_block_size
+        sb->blocks_count, sb->free_blocks_count, block_size
     );
     kprintf(
         LOG_INFO, "ext2", "%u blocks per group, %u inodes per group, starting block at %u\r\n",

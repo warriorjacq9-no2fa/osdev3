@@ -53,14 +53,12 @@ void kmain() {
     }
     
     void* buf = kmalloc(64, 0);
-    if((res = ext2->read(&fd, buf, 63, 0)) < 0) {
+    if((res = ext2->read(&fd, buf, 0, 64)) < 0) {
         kprintf(LOG_WARN, "kernel", "ext2_read failed with code %d\r\n", res);
         goto ret;
     }
 
-    ((char*)buf)[63] = 0;
-
-    kprintf(LOG_INFO, "kernel", "Read %s\r\n", (char*)buf);
+    kprintf(LOG_INFO, "kernel", "Read %.*s\r\n", 64, (char*)buf);
 
 ret:
     while(1) wait();
