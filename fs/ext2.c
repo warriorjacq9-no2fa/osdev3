@@ -135,42 +135,49 @@ ssize_t ext2_read_inode(ext2_inode_t* inode, void* buf, size_t off, size_t len) 
     return (ssize_t)len;
 }
 
-ext2_inode_t* lookup_inode(ext2_inode_t* i_dir, char* name) {
+ext2_inode_t* lookup_inode(ext2_inode_t* i_dir, const char* name) {
     if(i_dir == NULL) return NULL;
-    ext2_dir_entry_t* dir = (ext2_dir_entry_t*) kmalloc(i_dir->r0_size, 0);
-    kprintf(LOG_INFO, "ext2", "dir size = %u\n", i_dir->r0_size);
-    if(ext2_read_inode(i_dir, (void*)dir, 0, i_dir->r0_size) != i_dir->r0_size) return NULL;
-    uint8_t* ptr = (uint8_t*)dir;
-    uint8_t* end = ptr + i_dir->r0_size;
 
-    while(ptr < end) {
-        ext2_dir_entry_t* d = (ext2_dir_entry_t*)ptr;
+    uint8_t* block_buf = kmalloc(block_size, 0);
+    if(block_buf == NULL) return NULL;
 
-        if(d->rec_len == 0) {
-            kprintf(LOG_WARN, "ext2", "Invalid entry\r\n");
-            break;
-        }
+    size_t name_len = strlen(name);
+    size_t offset = 0;
 
-        if(d->inode != 0) {
-            char* d_name = kmalloc(d->name_len + 1, 0);
-            memcpy(d_name, d->name, d->name_len);
-            d_name[d->name_len] = '\0';
+    while(offset < i_dir->r0_size) {
+        // Read one block at a time
+        size_t to_read = min(block_size, i_dir->r0_size - offset);
+        ssize_t got = ext2_read_inode(i_dir, block_buf, offset, to_read);
+        if(got <= 0) break;
 
-            kprintf(LOG_INFO, "ext2", "Found %s (need %s)\r\n", d_name, name);
+        uint8_t* ptr = block_buf;
+        uint8_t* end = block_buf + got;
 
-            if(strcmp(d_name, name) == 0) {
+        while(ptr < end) {
+            ext2_dir_entry_t* d = (ext2_dir_entry_t*)ptr;
+
+            if(d->rec_len == 0) {
+                kprintf(LOG_WARN, "ext2", "Invalid entry\r\n");
+                goto done;
+            }
+
+            if(d->inode != 0 &&
+                d->name_len == name_len &&
+                memcmp(d->name, name, name_len) == 0)
+            {
                 ext2_inode_t* res = get_inode(d->inode);
-                kfree(d_name);
-                kfree(dir);
+                kfree(block_buf);
                 return res;
             }
 
-            kfree(d_name);
+            ptr += d->rec_len;
         }
 
-        ptr += d->rec_len;
+        offset += got;
     }
-    kfree(dir);
+
+done:
+    kfree(block_buf);
     return NULL;
 }
 

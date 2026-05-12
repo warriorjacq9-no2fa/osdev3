@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 
+int memcmp(const void *s1, const void *s2, size_t n);
 void* memcpy(void* restrict dstptr, const void* restrict srcptr, size_t size);
 void* memmove(void* dstptr, const void* srcptr, size_t size);
 void* memset(void* bufptr, int val, size_t size);

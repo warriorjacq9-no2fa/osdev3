@@ -43,6 +43,7 @@ lib/stdio/printf.o \
 lib/stdio/putc.o \
 lib/stdio/puts.o \
 lib/stdio/setcolor.o \
+lib/string/memcmp.o \
 lib/string/memcpy.o \
 lib/string/memmove.o \
 lib/string/memset.o \
