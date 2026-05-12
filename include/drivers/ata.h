@@ -26,6 +26,6 @@ enum ata_disk {
 
 int ata_init();
 int ata_read(void* buf, size_t seek, size_t size);
-void ata_write(uint32_t lba, uint8_t sectors, uint16_t* buffer);
+int ata_write(uint32_t lba, uint8_t sectors, const uint16_t* buffer);
 
 #endif

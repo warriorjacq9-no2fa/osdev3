@@ -7,6 +7,13 @@
 #include <io.h>
 
 #define ATA_TIMEOUT 100000
+#define ATA_SECTOR_SIZE 512
+#define ATA_MAX_SECTORS 256
+
+#define ATA_STATUS_BSY  0x80
+#define ATA_STATUS_DRQ  0x08
+#define ATA_STATUS_ERR  0x01
+#define ATA_STATUS_DF   0x20
 
 static bool drive_present = false;
 
@@ -18,19 +25,30 @@ static void ata_delay() {
     inb(ATA_STATUS);
 }
 
-static bool ata_wait_busy() {
+/* Wait until BSY clears and optionally check error */
+static bool ata_wait_ready() {
     for (int i = 0; i < ATA_TIMEOUT; i++) {
-        if (!(inb(ATA_STATUS) & 0x80)) return true;
+        uint8_t s = inb(ATA_STATUS);
+
+        if (s & ATA_STATUS_ERR) return false;
+        if (s & ATA_STATUS_DF)  return false;
+
+        if (!(s & ATA_STATUS_BSY))
+            return true;
     }
     return false;
 }
 
+/* Wait for DRQ */
 static bool ata_wait_drq() {
     for (int i = 0; i < ATA_TIMEOUT; i++) {
         uint8_t s = inb(ATA_STATUS);
 
-        if (s & 0x08) return true;   // DRQ
-        if (s & 0x01) return false;  // ERR
+        if (s & ATA_STATUS_ERR) return false;
+        if (s & ATA_STATUS_DF)  return false;
+
+        if (s & ATA_STATUS_DRQ)
+            return true;
     }
     return false;
 }
@@ -50,48 +68,29 @@ int ata_init() {
 
     outb(ATA_CMD, 0xEC); // IDENTIFY
 
+    if (!ata_wait_ready()) {
+        kprintf(LOG_ERR, "ata", "IDENTIFY: device not ready\r\n");
+        return -1;
+    }
+
     uint8_t status = inb(ATA_STATUS);
     if (status == 0) {
-        kprintf(LOG_ERR, "ata", "No drive found\n");
-        return -1;
-    }
-
-    if (!ata_wait_busy()) {
-        kprintf(LOG_ERR, "ata", "Timeout waiting for BSY clear\n");
-        return -1;
-    }
-
-    uint8_t mid  = inb(ATA_LBAMID);
-    uint8_t high = inb(ATA_LBAHIGH);
-
-    if (mid || high) {
-        uint16_t sig = (high << 8) | mid;
-
-        if (sig == 0xEB14) {
-            kprintf(LOG_INFO, "ata", "ATAPI drive detected\n");
-            return 1;
-        }
-
-        if (sig == 0xC33C) {
-            kprintf(LOG_INFO, "ata", "SATA drive detected\n");
-            return 2;
-        }
-
-        kprintf(LOG_ERR, "ata", "Unknown drive signature\n");
+        kprintf(LOG_ERR, "ata", "No ATA device found\r\n");
         return -1;
     }
 
     if (!ata_wait_drq()) {
-        kprintf(LOG_ERR, "ata", "IDENTIFY failed\n");
+        kprintf(LOG_ERR, "ata", "IDENTIFY: DRQ not set\r\n");
         return -1;
     }
 
+    uint16_t identity[256];
     for (int i = 0; i < 256; i++) {
-        inw(ATA_DATA);
+        identity[i] = inw(ATA_DATA);
     }
 
     drive_present = true;
-    kprintf(LOG_INFO, "ata", "Drive initialized\n");
+    kprintf(LOG_INFO, "ata", "Drive initialized, %u sectors\r\n", identity[60] | (identity[61] << 16));
 
     return 0;
 }
@@ -99,14 +98,25 @@ int ata_init() {
 /* ================== READ ================== */
 
 int ata_read(void* buf, size_t seek, size_t size) {
-    uint32_t offset = seek % 512;
-    uint32_t sectors = (offset + size + 511) / 512;
-    uint32_t lba = seek / 512;
-
     if (!drive_present) return 1;
-    if (!ata_wait_busy()) return 1;
 
-    uint16_t *dbuf = (uint16_t*)kmalloc(sectors * 512, 0);
+    uint32_t offset = seek % ATA_SECTOR_SIZE;
+    uint32_t lba = seek / ATA_SECTOR_SIZE;
+    uint32_t sectors = (offset + size + ATA_SECTOR_SIZE - 1) / ATA_SECTOR_SIZE;
+
+    if (sectors > ATA_MAX_SECTORS) {
+        kprintf(LOG_ERR, "ata", "Read exceeds max sector limit\r\n");
+        return 1;
+    }
+
+    uint8_t *dbuf = (uint8_t*)kmalloc(sectors * ATA_SECTOR_SIZE, 0);
+    if (!dbuf) return 1;
+
+    if (!ata_wait_ready()) {
+        kprintf(LOG_ERR, "ata", "Read: device busy\r\n");
+        kfree(dbuf);
+        return 1;
+    }
 
     outb(ATA_DRIVE, 0xE0 | ((lba >> 24) & 0x0F));
     ata_delay();
@@ -119,27 +129,36 @@ int ata_read(void* buf, size_t seek, size_t size) {
     outb(ATA_CMD, 0x20); // READ PIO
 
     for (uint32_t s = 0; s < sectors; s++) {
-        if (!ata_wait_busy() || !ata_wait_drq()) {
+        if (!ata_wait_ready() || !ata_wait_drq()) {
             kprintf(LOG_ERR, "ata", "Read error\r\n");
+            kfree(dbuf);
             return 1;
         }
 
         for (int i = 0; i < 256; i++) {
-            dbuf[s * 256 + i] = inw(ATA_DATA);
+            ((uint16_t*)dbuf)[s * 256 + i] = inw(ATA_DATA);
         }
     }
 
-    memcpy(buf, (void*)((char*)dbuf + (seek - (lba * 512))), size);
-    kfree((void*)dbuf);
+    memcpy(buf, dbuf + offset, size);
+
+    kfree(dbuf);
     return 0;
 }
 
 /* ================== WRITE ================== */
 
-void ata_write(uint32_t lba, uint8_t sectors, uint16_t* buffer) {
-    if (!drive_present) return;
+int ata_write(uint32_t lba, uint8_t sectors, const uint16_t* buffer) {
+    if (!drive_present) return 1;
+    if (sectors > ATA_MAX_SECTORS) {
+        kprintf(LOG_ERR, "ata", "Write exceeds max sector limit\r\n");
+        return 1;
+    }
 
-    if (!ata_wait_busy()) return;
+    if (!ata_wait_ready()) {
+        kprintf(LOG_ERR, "ata", "Write: device busy\r\n");
+        return 1;
+    }
 
     outb(ATA_DRIVE, 0xE0 | ((lba >> 24) & 0x0F));
     ata_delay();
@@ -152,9 +171,9 @@ void ata_write(uint32_t lba, uint8_t sectors, uint16_t* buffer) {
     outb(ATA_CMD, 0x30); // WRITE PIO
 
     for (int s = 0; s < sectors; s++) {
-        if (!ata_wait_busy() || !ata_wait_drq()) {
-            kprintf(LOG_ERR, "ata", "Write error\n");
-            return;
+        if (!ata_wait_ready() || !ata_wait_drq()) {
+            kprintf(LOG_ERR, "ata", "Write error\r\n");
+            return 1;
         }
 
         for (int i = 0; i < 256; i++) {
@@ -164,5 +183,12 @@ void ata_write(uint32_t lba, uint8_t sectors, uint16_t* buffer) {
 
     /* Flush cache */
     outb(ATA_CMD, 0xE7);
-    ata_wait_busy();
+
+    if (!ata_wait_ready()) {
+        kprintf(LOG_ERR, "ata", "Flush failed\r\n");
+        return 1;
+    }
+
+    kprintf(LOG_INFO, "ata", "Write complete\r\n");
+    return 0;
 }
