@@ -47,7 +47,7 @@ void kmain() {
 
     vnode_t fd;
     int res;
-    if((res = ext2->open(&fd, "/README.md", O_RDONLY)) < 0) {
+    if((res = ext2->open(&fd, "/arch/x86/include/ctx.h", O_RDONLY)) < 0) {
         kprintf(LOG_WARN, "kernel", "ext2_open failed with code %d\r\n", res);
         goto ret;
     }

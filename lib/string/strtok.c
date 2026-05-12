@@ -1,28 +1,31 @@
 #include <stddef.h>
 #include <string.h>
 
-char* strtok_r(char* s, const char* delim, char** save_ptr) {
-    char* end;
+char *strtok_r(char *s, const char *delim, char **saveptr)
+{
+    char *token_start;
 
-    if(s == NULL) s = *save_ptr;
-    if(*s == '\0') {
-        *save_ptr = s;
+    if (s == NULL)
+        s = *saveptr;
+
+    if (s == NULL || *s == '\0') {
+        *saveptr = s;
         return NULL;
     }
 
     s += strspn(s, delim);
-    if(*s == '\0') {
-        *save_ptr = s;
+    if (*s == '\0') {
+        *saveptr = s;
         return NULL;
     }
 
-    end = s + strcspn(s, delim);
-    if(*end == '\0') {
-        *save_ptr = end;
-        return s;
-    }
+    token_start = s;
 
-    *end = '\0';
-    *save_ptr = end + 1;
-    return s;
+    s += strcspn(s, delim);
+
+    if (*s != '\0')
+        *s++ = '\0';
+
+    *saveptr = s;
+    return token_start;
 }
