@@ -23,8 +23,6 @@ void kmain() {
     kthread_init(16);
     kevent_init(16, 8);
     ata_init();
-    
-    kshell_init(256, 16);
 
     size_t efd;
     kthread_create(&efd, kevent_proc, NULL, PRIV_KERNEL);
@@ -68,5 +66,6 @@ void kmain() {
     kprintf(LOG_INFO, "kernel", "Read %.*s\r\n", 64, (char*)buf);
 
 ret:
+    kshell_init(256, 16);
     while(1) wait();
 }
