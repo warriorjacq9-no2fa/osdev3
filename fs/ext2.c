@@ -351,7 +351,6 @@ int ext2_fstat(vnode_t* node, stat_t* buf) {
     buf->st_atime = inode->atime;
     buf->st_mtime = inode->mtime;
     buf->st_ctime = inode->ctime;
-    kfree(inode);
     return 0;
 }
 
