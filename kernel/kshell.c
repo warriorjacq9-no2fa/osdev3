@@ -147,12 +147,14 @@ void kconsumer_shell(kevent_input_t *evt) {
             state = S_NONE;
             switch(c) {
                 case 'A':
-                    if(histptr >= len - 1 || !(shellhist[histptr + 1])) break;
+                    if(histptr >= hist_len - 1 || !(shellhist[histptr + 1])) break;
                     shellbuf = shellhist[++histptr];
+                    shellptr = strlen(shellbuf);
                     break;
                 case 'B':
                     if(histptr <= 0) break;
                     shellbuf = shellhist[--histptr];
+                    shellptr = strlen(shellbuf);
                     break;
             }
             puts(PROMPT("\r\033[2K"));
@@ -165,13 +167,14 @@ void kconsumer_arrows(kevent_input_t *evt) {
     if(evt->key.pressed) {
         switch(evt->key.keycode) {
             case KEY_UP:
-                if(histptr >= len - 1) break;
-                char* temp = shellhist[++histptr];
-                if(temp) shellbuf = temp;
+                if(histptr >= hist_len - 1 || !(shellhist[histptr + 1])) break;
+                shellbuf = shellhist[++histptr];
+                shellptr = strlen(shellbuf);
                 break;
             case KEY_DOWN:
                 if(histptr <= 0) break;
                 shellbuf = shellhist[--histptr];
+                shellptr = strlen(shellbuf);
                 break;
         }
     }
