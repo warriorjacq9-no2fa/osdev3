@@ -5,8 +5,10 @@
 #include <string.h>
 #include <stdio.h>
 #include <ansi.h>
+#include <fs/vfs.h>
+#include <fs/ext2.h>
 
-#define PROMPT(n) (n "> ")
+#define PROMPT(n) (n "$ ")
 
 static size_t len, hist_len;
 
@@ -20,14 +22,98 @@ enum ansi_state {
     S_ESC,
     S_CSI
 };
+
+enum kshell_commands {
+    KC_NONE,
+    KC_READ,
+    KC_STAT
+};
+
 static int state;
 
-void kshell_proc(char* s) {
-    kprintf(LOG_INFO, "kernel", "You typed %s\r\n", s);
+const char *mode_to_string(int mode) {
+    static char str[11];
+
+    // File type
+    str[0] =
+        S_ISREG(mode)  ? '-' :
+        S_ISDIR(mode)  ? 'd' :
+        S_ISLNK(mode)  ? 'l' :
+        S_ISCHR(mode)  ? 'c' :
+        S_ISBLK(mode)  ? 'b' :
+        S_ISFIFO(mode) ? 'p' :
+        S_ISSOCK(mode) ? 's' :
+                          '?';
+
+    // Owner permissions
+    str[1] = (mode & S_IRUSR) ? 'r' : '-';
+    str[2] = (mode & S_IWUSR) ? 'w' : '-';
+    str[3] = (mode & S_IXUSR) ? 'x' : '-';
+
+    // Group permissions
+    str[4] = (mode & S_IRGRP) ? 'r' : '-';
+    str[5] = (mode & S_IWGRP) ? 'w' : '-';
+    str[6] = (mode & S_IXGRP) ? 'x' : '-';
+
+    // Other permissions
+    str[7] = (mode & S_IROTH) ? 'r' : '-';
+    str[8] = (mode & S_IWOTH) ? 'w' : '-';
+    str[9] = (mode & S_IXOTH) ? 'x' : '-';
+
+    str[10] = '\0';
+
+    return str;
+}
+
+int kshell_hash(char* cmd) {
+    if(strcmp(cmd, "read") == 0) return KC_READ;
+    if(strcmp(cmd, "stat") == 0) return KC_STAT;
+    return KC_NONE;
+}
+
+void kshell_proc(char* str) {
+    char* s = strdup(str);
+    char* save;
+    char* cmd = strtok_r(s, " ", &save);
+    switch(kshell_hash(cmd)) {
+        case KC_READ:
+            char* arg1 = strtok_r(NULL, " ", &save);
+            if(arg1 == NULL) {
+                kprintf(LOG_WARN, "kernel", "Usage: read <filepath>\r\n");
+                break;
+            }
+            kprintf(LOG_INFO, "kernel", "Read command %s\r\n", arg1);
+            break;
+        case KC_STAT:
+            char* fp = strtok_r(NULL, " ", &save);
+            if(fp == NULL) {
+                kprintf(LOG_WARN, "kernel", "Usage: stat <filepath>\r\n");
+                break;
+            }
+            stat_t data;
+            int res;
+            if((res = ext2_stat(fp, &data)) < 0) {
+                if(res == -ENOENT)
+                    kprintf(LOG_WARN, "kernel", "File not found: %s\r\n", fp);
+                else
+                    kprintf(LOG_WARN, "kernel", "stat failed with code %d\r\n", res);
+                break;
+            }
+            kprintf(LOG_INFO, "kernel", "%s %u %04u:%04u % 12u %s\r\n",
+                mode_to_string(data.st_mode), data.st_nlink,
+                data.st_uid, data.st_gid, data.st_size, fp
+            );
+            break;
+        case KC_NONE:
+            kprintf(LOG_WARN, "kernel", "Not a command: %s\r\n", cmd);
+            break;
+    }
+    kfree(s);
 }
 
 void kconsumer_shell(kevent_input_t *evt) {
     char c = evt->ch.character;
+    if(c == '\r') c = '\n'; // Enter on terminal emulators sends a carriage return
     switch(state) {
         case S_NONE:
             if(c == '\e') {

@@ -39,6 +39,14 @@
 #define S_IXOTH     0x0001
 #define S_IRWXO     (S_IROTH | S_IWOTH | S_IXOTH)
 
+#define S_ISSOCK(n) (n & 0xC000)
+#define S_ISLNK(n)  (n & 0xA000)
+#define S_ISREG(n)  (n & 0x8000)
+#define S_ISBLK(n)  (n & 0x6000)
+#define S_ISDIR(n)  (n & 0x4000)
+#define S_ISCHR(n)  (n & 0x2000)
+#define S_ISFIFO(n) (n & 0x1000)
+
 
 // int bdev_read_t(void* buf, size_t seek, size_t len)
 typedef int (*bdev_read_t)(void*, size_t, size_t);
