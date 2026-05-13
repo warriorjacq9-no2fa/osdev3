@@ -95,6 +95,7 @@ size_t get_block(ext2_inode_t* inode, size_t log_block) {
 }
 
 ext2_inode_t* get_inode(size_t in) {
+    if(in == 0) return NULL;
     size_t bg = (in - 1) / sb->inodes_per_group;
     size_t l_id = (in - 1) % sb->inodes_per_group;
 
