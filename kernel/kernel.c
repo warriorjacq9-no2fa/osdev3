@@ -52,8 +52,8 @@ void kmain() {
     }
 
     stat_t stats;
-    if((res = fd.ops->stat("/arch/x86/include/ctx.h", &stats))) {
-        kprintf(LOG_WARN, "kernel", "ext2_stat failed with code %d\r\n", res);
+    if((res = fd.ops->fstat(&fd, &stats))) {
+        kprintf(LOG_WARN, "kernel", "ext2_fstat failed with code %d\r\n", res);
         goto ret;
     }
 

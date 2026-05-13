@@ -59,6 +59,8 @@ struct vnode_ops {
     ssize_t (*write)(vnode_t*, void*, size_t, size_t);
     // int stat(const char* filename, stat_t* buf)
     int (*stat)(const char*, stat_t*);
+    // int fstat(vnode_t* node, stat_t* buf)
+    int (*fstat)(vnode_t*, stat_t*);
 };
 
 struct vnode {

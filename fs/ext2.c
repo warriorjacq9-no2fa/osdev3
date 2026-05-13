@@ -15,6 +15,11 @@
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
 
+typedef struct ext2_private {
+    ext2_inode_t* inode;
+    size_t i_num;
+} ext2_priv_t;
+
 static ext2_sb_t *sb;
 static ext2_sb_ext_t *ext_sb;
 static ext2_bgdesc_t *bgdesc_table;
@@ -30,7 +35,6 @@ ext2_inode_t* get_fp(const char* filepath);
 static inline size_t block_offset(size_t block) {
     return vol_start + block * block_size;
 }
-
 
 size_t get_block_iter(size_t log_block, size_t bnum, size_t iter) {
     if(bnum == 0 || iter == 0) return 0;
@@ -263,7 +267,8 @@ size_t get_fp_num(const char* filepath) {
 }
 
 int ext2_open(vnode_t* node, const char* filename, int flags, ...) {
-    ext2_inode_t* inode = get_fp(filename);
+    size_t i_num = get_fp_num(filename);
+    ext2_inode_t* inode = get_inode(i_num);
 
     const bool create = (flags & (O_CREAT | O_TMPFILE)) != 0;
 
@@ -279,8 +284,12 @@ int ext2_open(vnode_t* node, const char* filename, int flags, ...) {
 
     if((inode->mode & EXT2_S_IFDIR) && (flags & O_WRONLY)) return -EISDIR;
 
+    ext2_priv_t* private = kmalloc(sizeof(ext2_priv_t), 0);
+    private->inode = inode;
+    private->i_num = i_num;
+
     node->flags = flags;
-    node->private = inode;
+    node->private = private;
     node->ops = &ops;
 
     if (create) {
@@ -296,13 +305,17 @@ int ext2_open(vnode_t* node, const char* filename, int flags, ...) {
 }
 
 int ext2_close(vnode_t* node) {
-    if(node->private) kfree(node->private); // TODO: ext2_free
+    if(node->private) { // TODO: ext2_free
+        ext2_priv_t* private = (ext2_priv_t*)node->private;
+        kfree(private->inode);
+        kfree(private);
+    }
     return 0;
 }
 
 ssize_t ext2_read(vnode_t* node, void* buf, size_t off, size_t len) {
     if(len == 0) return 0;
-    return ext2_read_inode(node->private, buf, off, len);
+    return ext2_read_inode(((ext2_priv_t*)node->private)->inode, buf, off, len);
 }
 
 int ext2_stat(const char* filename, stat_t* buf) {
@@ -310,6 +323,24 @@ int ext2_stat(const char* filename, stat_t* buf) {
     if(in == 0) return -ENOENT;
     ext2_inode_t* inode = get_inode(in);
     buf->st_ino = in;
+    buf->st_mode = inode->mode;
+    buf->st_nlink = inode->links_count;
+    buf->st_uid = inode->uid;
+    buf->st_gid = inode->gid;
+    buf->st_size = inode->r0_size;
+    buf->st_blksize = block_size;
+    buf->st_blocks = inode->blocks;
+    buf->st_atime = inode->atime;
+    buf->st_mtime = inode->mtime;
+    buf->st_ctime = inode->ctime;
+    kfree(inode);
+    return 0;
+}
+
+int ext2_fstat(vnode_t* node, stat_t* buf) {
+    ext2_priv_t* private = (ext2_priv_t*)node->private;
+    ext2_inode_t* inode = private->inode;
+    buf->st_ino = private->i_num;
     buf->st_mode = inode->mode;
     buf->st_nlink = inode->links_count;
     buf->st_uid = inode->uid;
@@ -360,5 +391,6 @@ int ext2_init(bdev_read_t _read, size_t _vol_start) {
     ops.close = ext2_close;
     ops.read = ext2_read;
     ops.stat = ext2_stat;
+    ops.fstat = ext2_fstat;
     return 0;
 }
