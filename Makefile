@@ -37,6 +37,7 @@ kernel/kernel.o \
 kernel/kevent.o \
 kernel/klog.o \
 kernel/kmalloc.o \
+kernel/kshell.o \
 kernel/kthread.o \
 lib/ringbuffer/ringbuffer.o \
 lib/stdio/printf.o \
@@ -75,6 +76,7 @@ include/kernel/kcall.h \
 include/kernel/kevent.h \
 include/kernel/klog.h \
 include/kernel/kmalloc.h \
+include/kernel/kshell.h \
 include/kernel/kthread.h \
 include/kernel/ringbuffer.h \
 include/ansi.h \
