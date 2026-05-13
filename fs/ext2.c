@@ -95,14 +95,16 @@ ext2_inode_t* get_inode(size_t in) {
     size_t l_id = (in - 1) % sb->inodes_per_group;
 
     size_t inode_table = bgdesc_table[bg].inode_table;
-
-    ext2_inode_t* inode = kmalloc(sizeof(ext2_inode_t), 0);
-
     size_t inode_size = (sb->rev_level >= 1) ? ext_sb->inode_size : sizeof(ext2_inode_t);
+
+    ext2_inode_t* inode = kmalloc(inode_size, 0);
 
     size_t off = block_offset(inode_table) + (l_id * inode_size);
 
-    if(read((void*)inode, off, inode_size)) return NULL;
+    if(read((void*)inode, off, inode_size)) {
+        kfree(inode);
+        return NULL;
+    }
     return inode;
 }
 
@@ -158,7 +160,7 @@ ext2_inode_t* lookup_inode(ext2_inode_t* i_dir, const char* name) {
 
             if(d->rec_len == 0) {
                 kprintf(LOG_WARN, "ext2", "Invalid entry\r\n");
-                goto done;
+                break;
             }
 
             if(d->inode != 0 &&
@@ -176,7 +178,6 @@ ext2_inode_t* lookup_inode(ext2_inode_t* i_dir, const char* name) {
         offset += got;
     }
 
-done:
     kfree(block_buf);
     return NULL;
 }
@@ -191,6 +192,68 @@ ext2_inode_t* get_fp(const char* filepath) {
         char* next = strtok_r(NULL, "/", &save);
         i_next = lookup_inode(i, tok);
         kfree(i);
+        i = i_next;
+        tok = next;
+    }
+
+    kfree(path);
+    return i;
+}
+
+size_t lookup_inode_num(ext2_inode_t* i_dir, const char* name) {
+    if(i_dir == NULL) return 0;
+
+    uint8_t* block_buf = kmalloc(block_size, 0);
+    if(block_buf == NULL) return 0;
+
+    size_t name_len = strlen(name);
+    size_t offset = 0;
+
+    while(offset < i_dir->r0_size) {
+        // Read one block at a time
+        size_t to_read = min(block_size, i_dir->r0_size - offset);
+        ssize_t got = ext2_read_inode(i_dir, block_buf, offset, to_read);
+        if(got <= 0) break;
+
+        uint8_t* ptr = block_buf;
+        uint8_t* end = block_buf + got;
+
+        while(ptr < end) {
+            ext2_dir_entry_t* d = (ext2_dir_entry_t*)ptr;
+
+            if(d->rec_len == 0) {
+                kprintf(LOG_WARN, "ext2", "Invalid entry\r\n");
+                break;
+            }
+
+            if(d->inode != 0 &&
+                d->name_len == name_len &&
+                memcmp(d->name, name, name_len) == 0)
+            {
+                kfree(block_buf);
+                return d->inode;
+            }
+
+            ptr += d->rec_len;
+        }
+
+        offset += got;
+    }
+    kfree(block_buf);
+    return 0;
+}
+
+size_t get_fp_num(const char* filepath) {
+    char* path = strdup((char*)filepath);
+    size_t i = EXT2_ROOT_INO;
+    size_t i_next;
+    char* save;
+    char* tok = strtok_r(path, "/", &save);
+    while(tok != NULL && i != 0) {
+        char* next = strtok_r(NULL, "/", &save);
+        ext2_inode_t* in = get_inode(i);
+        i_next = lookup_inode_num(in, tok);
+        kfree(in);
         i = i_next;
         tok = next;
     }
@@ -214,7 +277,7 @@ int ext2_open(vnode_t* node, const char* filename, int flags, ...) {
         return -EEXIST;
     }
 
-    if(inode->mode & EXT2_S_IFDIR && flags & O_WRONLY) return -EISDIR;
+    if((inode->mode & EXT2_S_IFDIR) && (flags & O_WRONLY)) return -EISDIR;
 
     node->flags = flags;
     node->private = inode;
@@ -243,8 +306,10 @@ ssize_t ext2_read(vnode_t* node, void* buf, size_t off, size_t len) {
 }
 
 int ext2_stat(const char* filename, stat_t* buf) {
-    ext2_inode_t* inode = get_fp(filename);
-    buf->st_ino = 0;
+    size_t in = get_fp_num(filename);
+    if(in == 0) return -ENOENT;
+    ext2_inode_t* inode = get_inode(in);
+    buf->st_ino = in;
     buf->st_mode = inode->mode;
     buf->st_nlink = inode->links_count;
     buf->st_uid = inode->uid;
@@ -255,6 +320,7 @@ int ext2_stat(const char* filename, stat_t* buf) {
     buf->st_atime = inode->atime;
     buf->st_mtime = inode->mtime;
     buf->st_ctime = inode->ctime;
+    kfree(inode);
     return 0;
 }
 

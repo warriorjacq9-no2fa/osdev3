@@ -50,6 +50,22 @@ void kmain() {
         kprintf(LOG_WARN, "kernel", "ext2_open failed with code %d\r\n", res);
         goto ret;
     }
+
+    stat_t stats;
+    if((res = fd.ops->stat("/arch/x86/include/ctx.h", &stats))) {
+        kprintf(LOG_WARN, "kernel", "ext2_stat failed with code %d\r\n", res);
+        goto ret;
+    }
+
+    kprintf(LOG_INFO, "kernel", "Stats: inode %u, mode %04o, links %u, uid:gid %04u:%04u\r\n",
+        stats.st_ino, stats.st_mode & 0x1FF, stats.st_nlink, stats.st_uid, stats.st_gid
+    );
+    kprintf(LOG_INFO, "kernel", "Stats: size %u, block size %u, blocks %u\r\n",
+        stats.st_size, stats.st_blksize, stats.st_blocks
+    );
+    kprintf(LOG_INFO, "kernel", "Stats: atime %u, mtime %u, ctime %u\r\n",
+        stats.st_atime, stats.st_mtime, stats.st_ctime
+    );
     
     void* buf = kmalloc(64, 0);
     if((res = fd.ops->read(&fd, buf, 0, 64)) < 0) {
