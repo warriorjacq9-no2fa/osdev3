@@ -121,6 +121,16 @@ disk.img:
 	qemu-img create -f raw $@ 1G
 	mkfs.ext2 $@
 
+	@set -e; \
+	MNT=../disk; \
+	trap 'mountpoint -q $$MNT && sudo umount $$MNT' EXIT; \
+	if mountpoint -q $$MNT; then \
+		sudo umount $$MNT; \
+	fi; \
+	sudo mount -o loop,rw,sync,X-mount.mkdir $@ $$MNT; \
+	sudo chown -R 1000:1000 $$MNT; \
+	cp -r ./* $$MNT/
+
 %.o: %.S
 	$(AS) $(AFLAGS) $< -o $@
 
