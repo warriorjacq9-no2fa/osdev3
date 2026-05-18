@@ -45,6 +45,7 @@ int kthread_create(size_t *fd, kthread_t thread, void* arg, char priv) {
     void* base = kmalloc(THREAD_STACK_SIZE, flags);
     void* kbase = kmalloc(THREAD_STACK_SIZE, 0);
     if(!base || !kbase) {
+        if(base) kfree(base);
         kprintf(LOG_WARN, "kthread", "kmalloc returned NULL\r\n");
         return 1;
     }
@@ -77,13 +78,14 @@ void kthread_schedule(uintptr_t **curr_sp, uintptr_t **next_sp) {
     while(ctx_buf[tn].state != TS_RUNNING || tn == c_thread) {
         tn = (tn + 1) % max_t;
         i++;
-        if(i >= max_t)
-            return;
-        else if(ctx_buf[tn].state == TS_DONE) {
+        if(i >= max_t) return;
+        if(ctx_buf[tn].state == TS_DONE) {
             // If a thread has just returned, free its stack and mark it as unused
             kt_context_t *ctx = &ctx_buf[tn];
-            kfree(ctx->stack_base);
-            kfree(ctx->kstack_base);
+            if(tn != 0) {
+                kfree(ctx->stack_base);
+                kfree(ctx->kstack_base);
+            }
             ctx->state = TS_UNUSED;
         }
     }
