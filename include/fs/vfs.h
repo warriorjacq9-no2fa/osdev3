@@ -2,6 +2,7 @@
 #define VFS_H
 
 #include <stddef.h>
+#include <stddef_.h>
 #include <stdint.h>
 
 #define EFAIL       1

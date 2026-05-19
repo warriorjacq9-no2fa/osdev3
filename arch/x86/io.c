@@ -20,6 +20,16 @@ inline uint16_t inw(uint16_t port) {
     return ret;
 }
 
+inline void outl(uint16_t port, uint32_t data) {
+    asm volatile("outl %k0, %w1" : : "a"(data), "Nd"(port) : "memory");
+}
+
+inline uint32_t inl(uint16_t port) {
+    uint32_t ret;
+    asm volatile("inl %w1, %k0" : "=a"(ret) : "Nd"(port) : "memory");
+    return ret;
+}
+
 inline void iowait() {
     outb(0x80, 0);
 }

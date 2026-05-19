@@ -8,6 +8,7 @@
 #include <kernel/kmalloc.h>
 #include <kernel/kthread.h>
 #include <drivers/ata.h>
+#include <drivers/pci.h>
 #include <fs/ext2.h>
 #include <mm.h>
 #include <arch.h>
@@ -33,6 +34,7 @@ void kmain() {
     if(res < 0) {
         kprintf(LOG_WARN, "kernel", "ext2_init returned error");
     }
+    pci_enumerate();
 
     kshell_init(256, 16);
     while(1) wait();
