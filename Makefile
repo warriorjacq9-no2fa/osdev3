@@ -106,6 +106,7 @@ test: os.img kernel.dump disk.img
 	qemu-system-i386 -D qemu.log -d int \
 		--no-reboot --no-shutdown \
 		-fda $< -hda disk.img \
+		-machine pc \
 		$(if $(DISPLAY),,-nographic -serial mon:stdio)
 
 debug: os.img kernel.dump disk.img

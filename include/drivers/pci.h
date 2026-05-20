@@ -23,7 +23,7 @@ typedef union {
 
 typedef struct pci_header_common {
     uint16_t    vid;
-    uint16_t    devid;
+    uint16_t    did;
     uint16_t    command;
     uint16_t    status;
     uint8_t     revision;
@@ -63,41 +63,39 @@ typedef struct pci_header_common {
 typedef struct pci_header_0 {
     uint32_t    bar[6];
     uint32_t    cis_ptr;
-    uint16_t    subsystem_id;
     uint16_t    subsystem_vid;
+    uint16_t    subsystem_id;
     uint32_t    rom_base;
-    uint8_t     res0[3];
-    uint8_t     cap_ptr;
-    uint32_t    res1;
-    uint8_t     max_latency;
-    uint8_t     min_grant;
-    uint8_t     int_pin;
+    uint32_t    cap_ptr;
+    uint32_t    res;
     uint8_t     int_line;
+    uint8_t     int_pin;
+    uint8_t     min_grant;
+    uint8_t     max_latency;
 } __attribute__((packed)) pci_h0_t;
 
 typedef struct pci_header_1 {
     uint32_t    bar[2];
-    uint8_t     sec_latency;
-    uint8_t     subordinate_bus;
-    uint8_t     sec_bus;
     uint8_t     prim_bus;
-    uint16_t    sec_status;
-    uint8_t     io_limit;
+    uint8_t     sec_bus;
+    uint8_t     subordinate_bus;
+    uint8_t     sec_latency;
     uint8_t     io_base;
-    uint16_t    mem_limit;
+    uint8_t     io_limit;
+    uint16_t    sec_status;
     uint16_t    mem_base;
-    uint16_t    pf_limit;
+    uint16_t    mem_limit;
     uint16_t    pf_base;
+    uint16_t    pf_limit;
     uint32_t    pf_base_upper;
     uint32_t    pf_limit_upper;
-    uint16_t    io_limit_upper;
     uint16_t    io_base_upper;
-    uint8_t     res[3];
-    uint8_t     cap;
+    uint16_t    io_limit_upper;
+    uint32_t    cap;
     uint32_t    rom_base;
-    uint16_t    bridge_ctrl;
-    uint8_t     int_pin;
     uint8_t     int_line;
+    uint8_t     int_pin;
+    uint16_t    bridge_ctrl;
 } __attribute__((packed)) pci_h1_t;
 
 void pci_enumerate();

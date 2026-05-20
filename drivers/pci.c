@@ -259,6 +259,29 @@ uint16_t pci_get_vendor(uint8_t bus, uint8_t dev, uint8_t func) {
     return pci_read_short(bus, dev, func, offsetof(pci_hc_t, vid));
 }
 
+uint32_t* pci_get_bars(uint8_t bus, uint8_t dev, uint8_t func, size_t* len) {
+    if(pci_get_vendor(bus, dev, func) == 0xFFFF) return NULL;
+    uint8_t header_type = pci_read_byte(bus, dev, func, offsetof(pci_hc_t, header_type));
+    size_t limit;
+    switch(header_type & 0x7F) {
+        case 0: limit = 6; break;
+        case 1: limit = 2; break;
+        default: return NULL;
+    }
+    size_t c = 0;
+    uint32_t* bars = kmalloc(limit * sizeof(uint32_t), 0);
+    for(size_t i = 0; i < limit; i++) {
+        uint32_t bar = pci_read_word(bus, dev, func, sizeof(pci_hc_t) + (i * sizeof(uint32_t)));
+        if(bar == 0) continue;
+        bars[c++] = bar;
+    }
+    uint32_t* res = kmalloc(c * sizeof(uint32_t), 0);
+    memcpy(res, bars, c * sizeof(uint32_t));
+    kfree(bars);
+    *len = c;
+    return res;
+}
+
 void* pci_get_data(uint8_t bus, uint8_t dev, uint8_t func) {
     if(pci_get_vendor(bus, dev, func) == 0xFFFF) return NULL;
     uint32_t data[sizeof(pci_hc_t) / sizeof(uint32_t)];
@@ -303,7 +326,7 @@ const char* pci_get_classname(uint8_t class_code, uint8_t subclass)
 }
 
 void pci_check_bar(uint8_t bus, uint8_t dev, uint8_t func, uint32_t* bars, size_t len) {
-    for(int i = 0; i < 6; i++) {
+    for(int i = 0; i < len; i++) {
         uint32_t bar = bars[i];
         uint64_t addr = 0;
         char* type = "";
@@ -341,12 +364,14 @@ void pci_check_function(uint8_t bus, uint8_t dev, uint8_t func) {
         bus, dev, func,
         pci_get_classname(hdr->class_code, hdr->subclass),
         hdr->vid,
-        hdr->devid
+        hdr->did
     );
     switch(hdr->header_type & 0x7F) {
         case 0:
-            pci_h0_t* h0 = (pci_h0_t*)((uint8_t*)data + sizeof(pci_hc_t));
-            pci_check_bar(bus, dev, func, h0->bar, sizeof(h0->bar) / sizeof(h0->bar[0]));
+            size_t len;
+            uint32_t* bars = pci_get_bars(bus, dev, func, &len);
+            if(bars == NULL) return;
+            pci_check_bar(bus, dev, func, bars, len);
             break;
         
         case 1:
