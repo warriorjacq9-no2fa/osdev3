@@ -32,7 +32,7 @@ void kmain() {
     int res = ext2_init(ata_read, 0);
 
     if(res < 0) {
-        kprintf(LOG_WARN, "kernel", "ext2_init returned error");
+        kprintf(LOG_WARN, "kernel", "ext2_init returned %d\r\n", res);
     }
     pci_enumerate();
 
