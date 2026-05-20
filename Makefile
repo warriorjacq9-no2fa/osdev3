@@ -8,7 +8,7 @@ CFLAGS ?= \
 -ffreestanding -fno-stack-protector \
 -fpic \
 -Os -march=i386 -m32 \
--Wall -Werror \
+-Wall -Werror -Wno-address-of-packed-member \
 -DKSIZE=$(KERNEL_SIZE_KB) -fno-delete-null-pointer-checks -g
 
 AS = i386-elf-as

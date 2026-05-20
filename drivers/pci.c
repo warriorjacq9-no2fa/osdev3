@@ -267,20 +267,24 @@ void* pci_get_data(uint8_t bus, uint8_t dev, uint8_t func) {
     }
     pci_hc_t* hc = (pci_hc_t*)data;
     void* ret = NULL;
-    if((hc->header_type & 0x7F) == 0) {
-        ret = kmalloc(sizeof(pci_hc_t) + sizeof(pci_h0_t), 0);
-        memcpy(ret, hc, sizeof(pci_hc_t));
-        uint32_t* buf = (uint32_t*)((uint8_t*)ret + sizeof(pci_hc_t));
-        for(size_t i = 0; i < sizeof(pci_h0_t); i += sizeof(uint32_t)) {
-            buf[i / sizeof(uint32_t)] = pci_read_word(bus, dev, func, sizeof(pci_hc_t) + i);
-        }
-    } else if((hc->header_type & 0x7F) == 1) {
-        ret = kmalloc(sizeof(pci_hc_t) + sizeof(pci_h1_t), 0);
-        memcpy(ret, hc, sizeof(pci_hc_t));
-        uint32_t* buf = (uint32_t*)((uint8_t*)ret + sizeof(pci_hc_t));
-        for(size_t i = 0; i < sizeof(pci_h1_t); i += sizeof(uint32_t)) {
-            buf[i / sizeof(uint32_t)] = pci_read_word(bus, dev, func, sizeof(pci_hc_t) + i);
-        }
+    switch(hc->header_type & 0x7F) {
+        case 0:
+            ret = kmalloc(sizeof(pci_hc_t) + sizeof(pci_h0_t), 0);
+            memcpy(ret, hc, sizeof(pci_hc_t));
+            uint32_t* buf = (uint32_t*)((uint8_t*)ret + sizeof(pci_hc_t));
+            for(size_t i = 0; i < sizeof(pci_h0_t); i += sizeof(uint32_t)) {
+                buf[i / sizeof(uint32_t)] = pci_read_word(bus, dev, func, sizeof(pci_hc_t) + i);
+            }
+            break;
+
+        case 1:
+            ret = kmalloc(sizeof(pci_hc_t) + sizeof(pci_h1_t), 0);
+            memcpy(ret, hc, sizeof(pci_hc_t));
+            buf = (uint32_t*)((uint8_t*)ret + sizeof(pci_hc_t));
+            for(size_t i = 0; i < sizeof(pci_h1_t); i += sizeof(uint32_t)) {
+                buf[i / sizeof(uint32_t)] = pci_read_word(bus, dev, func, sizeof(pci_hc_t) + i);
+            }
+            break;
     }
     return ret;
 }
@@ -298,15 +302,61 @@ const char* pci_get_classname(uint8_t class_code, uint8_t subclass)
     return "Unknown subclass";
 }
 
+void pci_check_bar(uint8_t bus, uint8_t dev, uint8_t func, uint32_t* bars, size_t len) {
+    for(int i = 0; i < 6; i++) {
+        uint32_t bar = bars[i];
+        uint64_t addr = 0;
+        char* type = "";
+        switch(bar & 0x01) {
+            case 0:
+                type = "MEM";
+                switch(bar & 0x06) {
+                    case 0:
+                        addr = bar & 0xFFFFFFF0;
+                        break;
+                    case 1:
+                        addr = bar & 0xFFF0;
+                        break;
+                    case 2:
+                        addr = bar & 0xFFFFFFF0;
+                        addr |= ((uint64_t)bars[++i] & 0xFFFFFFFF) << 32;
+                        break;
+                }
+                break;
+            case 1:
+                type = "I/O";
+                addr = bar & 0xFFFFFFFC;
+                break;
+        }
+        if(addr == 0) continue;
+        kprintf(LOG_INFO, "pci", "BAR %u: %08llX (%s)\r\n", i, addr, type);
+    }
+}
+
 void pci_check_function(uint8_t bus, uint8_t dev, uint8_t func) {
     void* data = pci_get_data(bus, dev, func);
     pci_hc_t* hdr = (pci_hc_t*)data;
-    kprintf(LOG_INFO, "pci", "Device %02x.%02x:%x %s %04x:%04x\r\n",
+    kprintf(LOG_INFO, "pci", "%02x %02x.%02x:%x %s %04x:%04x\r\n",
+        hdr->header_type,
         bus, dev, func,
         pci_get_classname(hdr->class_code, hdr->subclass),
         hdr->vid,
         hdr->devid
     );
+    switch(hdr->header_type & 0x7F) {
+        case 0:
+            pci_h0_t* h0 = (pci_h0_t*)((uint8_t*)data + sizeof(pci_hc_t));
+            pci_check_bar(bus, dev, func, h0->bar, sizeof(h0->bar) / sizeof(h0->bar[0]));
+            break;
+        
+        case 1:
+            pci_h1_t* h1 = (pci_h1_t*)((uint8_t*)data + sizeof(pci_hc_t));
+            kprintf(LOG_INFO, "pci", "Bridge %02x->%02x (sub %02x)\r\n",
+                h1->prim_bus, h1->sec_bus, h1->subordinate_bus
+            );
+            pci_check_bar(bus, dev, func, h1->bar, sizeof(h1->bar) / sizeof(h1->bar[0]));
+            break;
+    }
 }
 
 void pci_enumerate() {
