@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <drivers/drivers.h>
 
 #define PCI_CONFIG_ADDR 0xCF8
 #define PCI_CONFIG_DATA 0xCFC
@@ -97,6 +98,24 @@ typedef struct pci_header_1 {
     uint8_t     int_pin;
     uint16_t    bridge_ctrl;
 } __attribute__((packed)) pci_h1_t;
+
+struct pci_bus_handle {
+    uint8_t bus, dev, func;
+};
+
+typedef union {
+    struct pci_bus_handle handle;
+    uint32_t val;
+} pci_handle_t;
+
+typedef struct {
+    device_t    device;
+
+    uint32_t    bar[6];
+    bool        mmio[6];
+} pci_device_t;
+
+#define pci_device(d) ((pci_device_t*)d)
 
 void pci_enumerate();
 

@@ -259,7 +259,7 @@ uint16_t pci_get_vendor(uint8_t bus, uint8_t dev, uint8_t func) {
     return pci_read_short(bus, dev, func, offsetof(pci_hc_t, vid));
 }
 
-uint32_t* pci_get_bars(uint8_t bus, uint8_t dev, uint8_t func, size_t* len) {
+uint32_t* pci_get_bars(uint8_t bus, uint8_t dev, uint8_t func) {
     if(pci_get_vendor(bus, dev, func) == 0xFFFF) return NULL;
     uint8_t header_type = pci_read_byte(bus, dev, func, offsetof(pci_hc_t, header_type));
     size_t limit;
@@ -268,18 +268,12 @@ uint32_t* pci_get_bars(uint8_t bus, uint8_t dev, uint8_t func, size_t* len) {
         case 1: limit = 2; break;
         default: return NULL;
     }
-    size_t c = 0;
-    uint32_t* bars = kmalloc(limit * sizeof(uint32_t), 0);
+    uint32_t* bars = kmalloc(6 * sizeof(uint32_t), 0);
     for(size_t i = 0; i < limit; i++) {
         uint32_t bar = pci_read_word(bus, dev, func, sizeof(pci_hc_t) + (i * sizeof(uint32_t)));
-        if(bar == 0) continue;
-        bars[c++] = bar;
+        bars[i] = bar;
     }
-    uint32_t* res = kmalloc(c * sizeof(uint32_t), 0);
-    memcpy(res, bars, c * sizeof(uint32_t));
-    kfree(bars);
-    *len = c;
-    return res;
+    return bars;
 }
 
 void* pci_get_data(uint8_t bus, uint8_t dev, uint8_t func) {
@@ -368,10 +362,9 @@ void pci_check_function(uint8_t bus, uint8_t dev, uint8_t func) {
     );
     switch(hdr->header_type & 0x7F) {
         case 0:
-            size_t len;
-            uint32_t* bars = pci_get_bars(bus, dev, func, &len);
+            uint32_t* bars = pci_get_bars(bus, dev, func);
             if(bars == NULL) return;
-            pci_check_bar(bus, dev, func, bars, len);
+            pci_check_bar(bus, dev, func, bars, 6);
             break;
         
         case 1:
