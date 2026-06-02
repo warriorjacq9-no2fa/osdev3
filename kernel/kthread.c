@@ -2,21 +2,27 @@
 #include <kernel/kmalloc.h>
 #include <kernel/klog.h>
 #include <kernel/ringbuffer.h>
+#include <kernel/initcall.h>
 #include <arch.h>
 #include <ctx.h>
 #include <stdbool.h>
 #include <string.h>
+
+#define MAX_THREADS 16
+
+void _kthread_init();
+static initcall_t kthread_init __initcall_1 = _kthread_init;
 
 kt_context_t *ctx_buf;
 size_t c_thread;
 size_t max_t;
 bool has_thread = false;
 
-int kthread_init(size_t max_threads) {
+void _kthread_init() {
     lock();
-    max_t = max_threads;
+    max_t = MAX_THREADS;
     ctx_buf = kmalloc(max_t * sizeof(kt_context_t), 0);
-    if(!ctx_buf) return 1;
+    if(!ctx_buf) return; // TODO: panic
     kprintf(LOG_INFO, "kthread", "Allocated thread buffer for %u threads at %p\r\n", max_t, ctx_buf);
     memset(ctx_buf, 0, max_t * sizeof(kt_context_t));
     c_thread = 0;
@@ -27,7 +33,6 @@ int kthread_init(size_t max_threads) {
     kctx->stack_base = (void*)KSTACK_BASE;
     kctx->sp = 0;
     unlock();
-    return 0;
 }
 
 int kthread_create(size_t *fd, kthread_t thread, void* arg, char priv) {

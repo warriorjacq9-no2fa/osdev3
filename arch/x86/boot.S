@@ -3,7 +3,7 @@
 
 .global _start
 _start:
-    call mm_init
+    call _mm_init
     lea high, %ecx
     jmp *%ecx
 high:

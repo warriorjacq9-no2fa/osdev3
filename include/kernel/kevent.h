@@ -176,7 +176,6 @@ typedef struct kevent_consumer {
     kevent_itype_t type;
 } kevent_consumer_t;
 
-int kevent_init(size_t buf_sz, size_t num_consumers);
 int kevent_register(kevent_consumer_t consumer);
 void* kevent_proc(void* arg);
 int kinput(kevent_input_t *evt);

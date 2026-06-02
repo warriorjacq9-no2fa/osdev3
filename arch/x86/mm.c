@@ -1,6 +1,7 @@
 #include <mm.h>
 #include <kernel/kmalloc.h>
 #include <kernel/klog.h>
+#include <kernel/initcall.h>
 #include <arch.h>
 #include <string.h>
 #include <stdbool.h>
@@ -23,13 +24,18 @@
 #define i_pdir(n) ((n >> 22) & 0x3FF)
 #define i_ptab(n) ((n >> 12) & 0x3FF)
 
+void _mm_init();
+#ifndef __i386__
+static initcall_t mm_init __initcall_low = _mm_init;
+#endif
+
 static uint32_t kpagedir[1024] __attribute__((aligned(4096)));
 static uint32_t pagetab_id[1024] __attribute__((aligned(4096)));
 
 // The main bitmap for all memory
 static uint32_t bitmap[MAX_PAGES / 32];
 
-void mm_init() {
+void _mm_init() {
     memset(kpagedir, 0, sizeof(kpagedir));
 
     // Identity map the lower pagetable

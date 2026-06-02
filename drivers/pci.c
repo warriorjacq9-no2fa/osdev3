@@ -1,8 +1,10 @@
 #include <drivers/pci.h>
+#include <drivers/drivers.h>
 #include <kernel/kmalloc.h>
 #include <kernel/klog.h>
 #include <stddef.h>
 #include <string.h>
+#include <stdio.h>
 #include <io.h>
 
 typedef struct pci_class_lookup {
@@ -319,43 +321,14 @@ const char* pci_get_classname(uint8_t class_code, uint8_t subclass)
     return "Unknown subclass";
 }
 
-void pci_check_bar(uint8_t bus, uint8_t dev, uint8_t func, uint32_t* bars, size_t len) {
-    for(int i = 0; i < len; i++) {
-        uint32_t bar = bars[i];
-        uint64_t addr = 0;
-        char* type = "";
-        switch(bar & 0x01) {
-            case 0:
-                type = "MEM";
-                switch(bar & 0x06) {
-                    case 0:
-                        addr = bar & 0xFFFFFFF0;
-                        break;
-                    case 1:
-                        addr = bar & 0xFFF0;
-                        break;
-                    case 2:
-                        addr = bar & 0xFFFFFFF0;
-                        addr |= ((uint64_t)bars[++i] & 0xFFFFFFFF) << 32;
-                        break;
-                }
-                break;
-            case 1:
-                type = "I/O";
-                addr = bar & 0xFFFFFFFC;
-                break;
-        }
-        if(addr == 0) continue;
-        kprintf(LOG_INFO, "pci", "BAR %u: %08llX (%s)\r\n", i, addr, type);
-    }
-}
-
 void pci_check_function(uint8_t bus, uint8_t dev, uint8_t func) {
     void* data = pci_get_data(bus, dev, func);
     pci_hc_t* hdr = (pci_hc_t*)data;
-    kprintf(LOG_INFO, "pci", "%02x %02x.%02x:%x %s %04x:%04x\r\n",
+    puts("\r\n");
+    kprintf(LOG_INFO, "pci", "%02x %02x.%02x:%x (%02x) %s %04x:%04x\r\n",
         hdr->header_type,
         bus, dev, func,
+        hdr->prog_if,
         pci_get_classname(hdr->class_code, hdr->subclass),
         hdr->vid,
         hdr->did
@@ -364,7 +337,43 @@ void pci_check_function(uint8_t bus, uint8_t dev, uint8_t func) {
         case 0:
             uint32_t* bars = pci_get_bars(bus, dev, func);
             if(bars == NULL) return;
-            pci_check_bar(bus, dev, func, bars, 6);
+            pci_device_t* device = kmalloc(sizeof(pci_device_t), 0);
+            memcpy(device->bar, bars, 6 * sizeof(uint32_t));
+            
+            for(int i = 0; i < 6; i++) {
+                uint32_t bar = device->bar[i];
+                switch(bar & 0x01) {
+                    case 0:
+                        device->mmio[i] = true;
+                        switch(bar & 0x06) {
+                            case 0:
+                                device->bar[i] = bar & 0xFFFFFFF0;
+                                break;
+                            case 1:
+                                device->bar[i] = bar & 0xFFF0;
+                                break;
+                            case 2:
+                                //device->bar[i] = bar & 0xFFFFFFF0;
+                                //device->bar[i] |= ((uint64_t)bars[++i] & 0xFFFFFFFF) << 32;
+                                break;
+                        }
+                        break;
+                    case 1:
+                        device->mmio[i] = false;
+                        device->bar[i] = bar & 0xFFFFFFFC;
+                        break;
+                }
+            }
+
+            device->prog_if = hdr->prog_if;
+            device->device.id.bus_type = BUS_TYPE_PCI;
+            device->device.id.pci = (pci_device_id_t){
+                .vid = hdr->vid,
+                .did = hdr->did,
+                .class_code = hdr->class_code,
+                .subclass = hdr->subclass
+            };
+            device_publish((device_t*)device);
             break;
         
         case 1:
@@ -372,7 +381,6 @@ void pci_check_function(uint8_t bus, uint8_t dev, uint8_t func) {
             kprintf(LOG_INFO, "pci", "Bridge %02x->%02x (sub %02x)\r\n",
                 h1->prim_bus, h1->sec_bus, h1->subordinate_bus
             );
-            pci_check_bar(bus, dev, func, h1->bar, sizeof(h1->bar) / sizeof(h1->bar[0]));
             break;
     }
 }

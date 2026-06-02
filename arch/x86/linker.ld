@@ -17,6 +17,16 @@ SECTIONS
         *(.data)
     }
 
+    .initcall ALIGN(4) : {
+        __initcall_start = .;
+        KEEP(*(.initcall.low))
+        KEEP(*(.initcall.0))
+        KEEP(*(.initcall.1))
+        KEEP(*(.initcall.2))
+        KEEP(*(.initcall.3))
+        __initcall_end = .;
+    }
+
     .bss (NOLOAD) : {
         *(COMMON)
         *(.bss)

@@ -1,10 +1,17 @@
 #include <arch.h>
 #include <kernel/kmalloc.h>
+#include <kernel/initcall.h>
 #include "interrupts.h"
 #include <drivers/pic.h>
 #include <drivers/pit.h>
 #include <drivers/serial.h>
 #include <string.h>
+
+void _arch_init();
+void _usermode_init();
+
+static initcall_t arch_init __initcall_0 = _arch_init;
+static initcall_t usermode_init __initcall_1 = _usermode_init;
 
 void wait() {
     asm volatile("hlt");
@@ -48,7 +55,7 @@ static tss_entry_t *tss;
 extern uint8_t gdt_start[48];
 extern void flush_tss(void);
 
-void usermode_init() {
+void _usermode_init() {
     tss = kmalloc(sizeof(tss_entry_t), 0);
     memset(tss, 0, sizeof(tss_entry_t));
 
@@ -73,8 +80,8 @@ void kstack_update(uintptr_t sp) {
     tss->esp0 = (uint32_t)sp;
 }
 
-void arch_init() {
-    serial_init();
+void _arch_init() {
+    serial_init(); // TODO: PCI serial
     isr_init();
     pic_remap(0x20, 0x28);
     pic_setmask(0xFF, 0xFF);

@@ -48,8 +48,6 @@ uint32_t get_cr3();
 void set_cr3(uint32_t val);
 void lock();
 void unlock();
-void arch_init();
-void usermode_init();
 void kstack_update(uintptr_t sp);
 
 #endif

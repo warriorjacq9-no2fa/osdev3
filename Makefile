@@ -25,6 +25,7 @@ arch/x86/arch.o \
 arch/x86/interrupts.o \
 arch/x86/io.o \
 arch/x86/mm.o \
+drivers/drivers.o \
 drivers/ata.o \
 drivers/pci.o \
 drivers/pic.o \
@@ -65,6 +66,7 @@ arch/x86/include/io.h \
 arch/x86/include/mm.h \
 arch/x86/include/stddef.h \
 arch/x86/interrupts.h \
+include/drivers/drivers.h \
 include/drivers/ata.h \
 include/drivers/pci.h \
 include/drivers/pic.h \

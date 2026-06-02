@@ -105,7 +105,7 @@ struct pci_bus_handle {
 
 typedef union {
     struct pci_bus_handle handle;
-    uint32_t val;
+    uintptr_t val;
 } pci_handle_t;
 
 typedef struct {
@@ -113,6 +113,7 @@ typedef struct {
 
     uint32_t    bar[6];
     bool        mmio[6];
+    uint8_t     prog_if;
 } pci_device_t;
 
 #define pci_device(d) ((pci_device_t*)d)

@@ -2,7 +2,14 @@
 #include <kernel/kmalloc.h>
 #include <kernel/klog.h>
 #include <kernel/ringbuffer.h>
+#include <kernel/initcall.h>
 #include <stdio.h>
+
+#define BUF_SIZE 16
+#define MAX_CONSUMERS 8
+
+void _kevent_init();
+static initcall_t kevent_init __initcall_1 = _kevent_init;
 
 static kevent_consumer_t *consumers;
 static uint8_t max_consumers;
@@ -11,18 +18,18 @@ static uint8_t con_idx;
 static kevent_input_t *ibuf;
 static ringbuffer_t kinput_rb;
 
-int kevent_init(size_t buf_sz, size_t num_consumers) {
-    ibuf = kmalloc(buf_sz * sizeof(kevent_input_t), 0);
-    if(!ibuf) return 1;
-    kprintf(LOG_INFO, "kevent", "Allocated event buffer for %u events at %p\r\n", buf_sz, ibuf);
+void _kevent_init() {
+    ibuf = kmalloc(BUF_SIZE * sizeof(kevent_input_t), 0);
+    if(!ibuf) return; // TODO: panic
+    kprintf(LOG_INFO, "kevent", "Allocated event buffer for %u events at %p\r\n", BUF_SIZE, ibuf);
 
-    max_consumers = num_consumers;
-    consumers = kmalloc(num_consumers * sizeof(kevent_consumer_t), 0);
-    if(!consumers) return 1;
-    kprintf(LOG_INFO, "kevent", "Allocated consumer array of length %u at %p\r\n", num_consumers, consumers);
+    max_consumers = MAX_CONSUMERS;
+    consumers = kmalloc(MAX_CONSUMERS * sizeof(kevent_consumer_t), 0);
+    if(!consumers) return;
+    kprintf(LOG_INFO, "kevent", "Allocated consumer array of length %u at %p\r\n", MAX_CONSUMERS, consumers);
 
-    rb_init(&kinput_rb, ibuf, buf_sz, sizeof(kevent_input_t));
-    return 0;
+    rb_init(&kinput_rb, ibuf, BUF_SIZE, sizeof(kevent_input_t));
+    return;
 }
 
 int kevent_register(kevent_consumer_t consumer) {

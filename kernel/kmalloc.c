@@ -1,11 +1,15 @@
 #include <kernel/kmalloc.h>
 #include <kernel/klog.h>
+#include <kernel/initcall.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 
 #define MAX_COALESCE 65536
 #define MIN_SPLIT (sizeof(kheap_header_t) + 8 + sizeof(kheap_footer_t))
+
+void _kheap_init();
+static initcall_t kheap_init __initcall_0 = _kheap_init;
 
 typedef struct kheap_header {
     size_t size;
@@ -21,7 +25,7 @@ extern size_t __kheap_start;
 static void* heap_ptr[2];
 static void* heap_base[2];
 
-void kheap_init() {
+void _kheap_init() {
     heap_base[0] = (void*)(((size_t)&__kheap_start + 0xFFF) & 0xFFFFF000);
     heap_ptr[0] = heap_base[0];
     heap_base[1] = (void*)(0x10000000);

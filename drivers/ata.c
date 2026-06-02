@@ -1,6 +1,9 @@
 #include <drivers/ata.h>
+#include <drivers/drivers.h>
+#include <drivers/pci.h>
 #include <kernel/kmalloc.h>
 #include <kernel/klog.h>
+#include <kernel/initcall.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -15,24 +18,23 @@
 #define ATA_STATUS_DF    0x20
 #define ATA_STATUS_BSY   0x80
 
-static bool drive_present = false;
+void _ata_init();
+static initcall_t ata_init __initcall_3 = _ata_init;
 
-/* ============================================================
- * 400ns delay
- * ============================================================ */
+static driver_t driver;
+
+static uintptr_t base;
+
 static inline void ata_delay(void) {
-    inb(ATA_STATUS);
-    inb(ATA_STATUS);
-    inb(ATA_STATUS);
-    inb(ATA_STATUS);
+    inb(base + ATA_STATUS);
+    inb(base + ATA_STATUS);
+    inb(base + ATA_STATUS);
+    inb(base + ATA_STATUS);
 }
 
-/* ============================================================
- * Wait until BSY clears
- * ============================================================ */
 static bool ata_wait_not_busy(void) {
     for (int i = 0; i < ATA_TIMEOUT; i++) {
-        uint8_t s = inb(ATA_STATUS);
+        uint8_t s = inb(base + ATA_STATUS);
 
         if (!(s & ATA_STATUS_BSY))
             return true;
@@ -41,20 +43,11 @@ static bool ata_wait_not_busy(void) {
     return false;
 }
 
-/* ============================================================
- * Poll device for PIO transfer readiness
- *
- * Requires:
- *   BSY == 0
- *   DRQ == 1
- * Fails on:
- *   ERR or DF
- * ============================================================ */
 static bool ata_poll(void) {
     ata_delay();
 
     for (int i = 0; i < ATA_TIMEOUT; i++) {
-        uint8_t s = inb(ATA_STATUS);
+        uint8_t s = inb(base + ATA_STATUS);
 
         if (s & ATA_STATUS_ERR)
             return false;
@@ -72,46 +65,57 @@ static bool ata_poll(void) {
     return false;
 }
 
-/* ============================================================
- * INIT
- * ============================================================ */
-int ata_init(void) {
-    drive_present = false;
+probe_result_t ata_probe(device_t* dev) {
+    if(dev->id.bus_type != BUS_TYPE_PCI) return PROBE_SKIP;
+    pci_device_t* device = pci_device(dev);
+
+    if(device->prog_if & 0x01) { // PCI native controller
+        for(int i = 0; i < 6; i++) {
+            if(device->bar[i] == 0) continue;
+            if(!device->mmio[i]) base = device->bar[i];
+        }
+    } else { // Compat mode (0x1F0-0x1F7)
+        base = 0x1F0;
+    }
+
+    if(!base) {
+        kprintf(LOG_WARN, "ata", "Base address not found\r\n");
+        return PROBE_SKIP;
+    }
+    kprintf(LOG_INFO, "ata", "Successfully probed device at %08X\r\n", base);
 
     /* Select primary master */
-    outb(ATA_DRIVE, 0xA0);
+    outb(base + ATA_DRIVE, 0xA0);
     ata_delay();
 
     /* Clear registers */
-    outb(ATA_SECS,    0);
-    outb(ATA_LBALOW,  0);
-    outb(ATA_LBAMID,  0);
-    outb(ATA_LBAHIGH, 0);
+    outb(base + ATA_SECS,    0);
+    outb(base + ATA_LBALOW,  0);
+    outb(base + ATA_LBAMID,  0);
+    outb(base + ATA_LBAHIGH, 0);
 
     /* IDENTIFY */
-    outb(ATA_CMD, 0xEC);
+    outb(base + ATA_CMD, 0xEC);
 
-    uint8_t status = inb(ATA_STATUS);
+    uint8_t status = inb(base + ATA_STATUS);
 
     /* No device present */
     if (status == 0) {
         kprintf(LOG_ERR, "ata", "No ATA device found\r\n");
-        return -1;
+        return PROBE_SKIP;
     }
 
     /* Wait for device */
     if (!ata_poll()) {
         kprintf(LOG_ERR, "ata", "IDENTIFY failed\r\n");
-        return -1;
+        return PROBE_ERROR;
     }
 
     uint16_t identity[256];
 
     for (int i = 0; i < 256; i++) {
-        identity[i] = inw(ATA_DATA);
+        identity[i] = inw(base + ATA_DATA);
     }
-
-    drive_present = true;
 
     uint32_t sectors =
         ((uint32_t)identity[61] << 16) |
@@ -124,14 +128,32 @@ int ata_init(void) {
         sectors
     );
 
-    return 0;
+    return PROBE_OK;
 }
 
-/* ============================================================
- * READ (PIO28)
- * ============================================================ */
+void _ata_init() {
+    base = 0;
+    device_id_t* id_table = kmalloc(sizeof(device_id_t) * 2, 0);
+    id_table[0].bus_type = BUS_TYPE_PCI;
+    id_table[0].pci = (pci_device_id_t){
+        .vid = 0xFFFF,
+        .did = 0xFFFF,
+        .class_code = 0x1,
+        .subclass = 0x1
+    };
+    id_table[1] = (device_id_t)DEVICE_ID_TABLE_END;
+    driver = (driver_t){
+        .id_table = id_table,
+        .name = "IDE driver",
+        .probe = ata_probe,
+        .remove = NULL
+    };
+    driver_register(&driver);
+    return;
+}
+
 int ata_read(void* buf, size_t seek, size_t size) {
-    if (!drive_present)
+    if (!base)
         return 1;
 
     if (size == 0)
@@ -162,17 +184,17 @@ int ata_read(void* buf, size_t seek, size_t size) {
     }
 
     /* Select drive + high LBA nibble */
-    outb(ATA_DRIVE, 0xE0 | ((lba >> 24) & 0x0F));
+    outb(base + ATA_DRIVE, 0xE0 | ((lba >> 24) & 0x0F));
     ata_delay();
 
     /* Program registers */
-    outb(ATA_SECS,    (uint8_t)sectors);
-    outb(ATA_LBALOW,  (uint8_t)(lba));
-    outb(ATA_LBAMID,  (uint8_t)(lba >> 8));
-    outb(ATA_LBAHIGH, (uint8_t)(lba >> 16));
+    outb(base + ATA_SECS,    (uint8_t)sectors);
+    outb(base + ATA_LBALOW,  (uint8_t)(lba));
+    outb(base + ATA_LBAMID,  (uint8_t)(lba >> 8));
+    outb(base + ATA_LBAHIGH, (uint8_t)(lba >> 16));
 
     /* READ SECTORS */
-    outb(ATA_CMD, 0x20);
+    outb(base + ATA_CMD, 0x20);
 
     for (uint32_t s = 0; s < sectors; s++) {
 
@@ -188,7 +210,7 @@ int ata_read(void* buf, size_t seek, size_t size) {
             (uint16_t*)(dbuf + (s * ATA_SECTOR_SIZE));
 
         for (int i = 0; i < 256; i++) {
-            ptr[i] = inw(ATA_DATA);
+            ptr[i] = inw(base + ATA_DATA);
         }
 
         /*
@@ -203,14 +225,11 @@ int ata_read(void* buf, size_t seek, size_t size) {
     return 0;
 }
 
-/* ============================================================
- * WRITE (PIO28)
- * ============================================================ */
 int ata_write(uint32_t lba,
               uint8_t sectors,
               const uint16_t* buffer)
 {
-    if (!drive_present)
+    if (!base)
         return 1;
 
     if (sectors == 0 || sectors > ATA_MAX_SECTORS) {
@@ -223,15 +242,15 @@ int ata_write(uint32_t lba,
         return 1;
     }
 
-    outb(ATA_DRIVE, 0xE0 | ((lba >> 24) & 0x0F));
+    outb(base + ATA_DRIVE, 0xE0 | ((lba >> 24) & 0x0F));
     ata_delay();
 
-    outb(ATA_SECS,    sectors);
-    outb(ATA_LBALOW,  (uint8_t)(lba));
-    outb(ATA_LBAMID,  (uint8_t)(lba >> 8));
-    outb(ATA_LBAHIGH, (uint8_t)(lba >> 16));
+    outb(base + ATA_SECS,    sectors);
+    outb(base + ATA_LBALOW,  (uint8_t)(lba));
+    outb(base + ATA_LBAMID,  (uint8_t)(lba >> 8));
+    outb(base + ATA_LBAHIGH, (uint8_t)(lba >> 16));
 
-    outb(ATA_CMD, 0x30);
+    outb(base + ATA_CMD, 0x30);
 
     for (uint32_t s = 0; s < sectors; s++) {
 
@@ -243,14 +262,14 @@ int ata_write(uint32_t lba,
         const uint16_t* ptr = buffer + (s * 256);
 
         for (int i = 0; i < 256; i++) {
-            outw(ATA_DATA, ptr[i]);
+            outw(base + ATA_DATA, ptr[i]);
         }
 
         ata_delay();
     }
 
     /* Flush cache */
-    outb(ATA_CMD, 0xE7);
+    outb(base + ATA_CMD, 0xE7);
 
     if (!ata_wait_not_busy()) {
         kprintf(LOG_ERR, "ata", "Flush failed\r\n");

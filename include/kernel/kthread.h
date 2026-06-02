@@ -30,7 +30,6 @@ typedef struct kt_context {
 void kthread_ret(void* res);
 int kthread_create(size_t *fd, kthread_t thread, void* arg, char priv);
 void kthread_schedule(uintptr_t **curr_sp, uintptr_t **next_sp);
-int kthread_init(size_t max_threads);
 void* kthread_join(size_t fd);
 
 #endif

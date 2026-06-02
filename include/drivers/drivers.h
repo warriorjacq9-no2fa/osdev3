@@ -33,7 +33,6 @@ typedef struct {
         acpi_device_id_t acpi;
         eisa_device_id_t eisa;
     };
-    uintptr_t driver_data;   /* opaque per-entry cookie passed to probe() */
 } device_id_t;
 
 #define DEVICE_ID_TABLE_END  { .bus_type = BUS_TYPE_COUNT }
@@ -43,14 +42,11 @@ typedef struct {
  * Drivers treat this as read-only; the bus layer owns allocation.
  */
 typedef struct device device_t;
+typedef struct driver driver_t;
 
 struct device {
-    bus_type_t   bus_type;
-    uintptr_t    bus_handle;
-    const char  *name;
-    void        *driver_data;   /* set by driver in probe(), owned by driver */
-
-    device_t    *next;
+    device_id_t id;
+    driver_t* driver;
 };
 
 typedef enum {
@@ -59,26 +55,22 @@ typedef enum {
     PROBE_ERROR = -1,   /* hard error during probe           */
 } probe_result_t;
 
-typedef struct driver driver_t;
-
 struct driver {
     const char          *name;        /* e.g. "e1000"                         */
-    const device_id_t   *id_table;    /* NULL-terminated with DEVICE_ID_TABLE_END */
+    device_id_t         *id_table;    /* NULL-terminated with DEVICE_ID_TABLE_END */
 
     /*
      * probe()  - device was matched; driver should initialize it.
      *            matched_id points to the id_table entry that fired.
      *            Returns PROBE_OK to claim, PROBE_SKIP to pass.
      */
-    probe_result_t (*probe) (device_t *dev, const device_id_t *matched_id);
+    probe_result_t (*probe)(device_t *dev);
 
     /*
      * remove() - device is going away (hot-unplug, shutdown).
      *            Driver must release all resources acquired in probe().
      */
     void           (*remove)(device_t *dev);
-
-    driver_t       *next;
 };
 
 /*
