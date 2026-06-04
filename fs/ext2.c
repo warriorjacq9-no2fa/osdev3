@@ -1,4 +1,5 @@
 #include <fs/ext2.h>
+#include <block/block.h>
 #include <kernel/kmalloc.h>
 #include <kernel/klog.h>
 #include <stdarg.h>
@@ -24,11 +25,31 @@ static ext2_sb_t *sb;
 static ext2_sb_ext_t *ext_sb;
 static ext2_bgdesc_t *bgdesc_table;
 static size_t vol_start;
-static bdev_read_t read;
+static blkdev_t* dev; // TODO: multi-block device/mountpoints
 
 static vops_t ops;
 
 static size_t block_size;
+
+int read(void* buf, size_t off, size_t len) {
+    uint32_t offset  = off % dev->block_size;
+    uint32_t lba     = off / dev->block_size;
+    uint32_t count =
+        (offset + len + dev->block_size - 1)
+        / dev->block_size;
+    
+    uint8_t* dbuf = kmalloc(count * dev->block_size, 0);
+    if(dbuf == NULL) return 1;
+    
+    if(dev->ops->read(dev, dbuf, lba, count)) {
+        kfree(dbuf);
+        return 1;
+    }
+
+    memcpy(buf, dbuf + offset, len);
+    kfree(dbuf);
+    return 0;
+}
 
 ext2_inode_t* get_fp(const char* filepath);
 
@@ -355,9 +376,10 @@ int ext2_fstat(vnode_t* node, stat_t* buf) {
     return 0;
 }
 
-int ext2_init(bdev_read_t _read, size_t _vol_start) {
+int ext2_init(size_t _vol_start) {
     vol_start = _vol_start;
-    read = _read;
+    dev = default_blkdev();
+    kprintf(LOG_INFO, "ext2", "Init on device %s\r\n", dev->name);
     sb = kmalloc(sizeof(ext2_sb_t), 0);
     if(read((void*)sb, vol_start + 1024, sizeof(ext2_sb_t))) return -1;
     if(sb->magic != EXT2_SUPER_MAGIC) {

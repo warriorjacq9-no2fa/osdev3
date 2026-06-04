@@ -25,6 +25,7 @@ arch/x86/arch.o \
 arch/x86/interrupts.o \
 arch/x86/io.o \
 arch/x86/mm.o \
+block/block.o \
 drivers/drivers.o \
 drivers/ata.o \
 drivers/pci.o \
@@ -41,6 +42,7 @@ kernel/klog.o \
 kernel/kmalloc.o \
 kernel/kshell.o \
 kernel/kthread.o \
+lib/list/dllist.o \
 lib/ringbuffer/ringbuffer.o \
 lib/stdio/printf.o \
 lib/stdio/putc.o \
@@ -66,6 +68,7 @@ arch/x86/include/io.h \
 arch/x86/include/mm.h \
 arch/x86/include/stddef.h \
 arch/x86/interrupts.h \
+include/block/block.h \
 include/drivers/drivers.h \
 include/drivers/ata.h \
 include/drivers/pci.h \
@@ -76,6 +79,7 @@ include/drivers/serial.h \
 include/drivers/vga.h \
 include/fs/ext2.h \
 include/fs/vfs.h \
+include/kernel/dllist.h \
 include/kernel/kcall.h \
 include/kernel/kevent.h \
 include/kernel/klog.h \
@@ -104,11 +108,15 @@ kernel.bin: arch/x86/linker.ld $(OBJS)
 	cp $(basename $@).obj $@
 	truncate -s 32K $@
 
-test: os.img kernel.dump disk.img
+test: os.img kernel.dump disk.img disk2.img
 	qemu-system-i386 -D qemu.log -d int \
 		--no-reboot --no-shutdown \
-		-fda $< -hda disk.img \
 		-machine pc \
+		-fda $< \
+		-drive file=disk.img,if=none,id=drive1,format=raw \
+		-device ide-hd,drive=drive1,bus=ide.0 \
+		-drive file=disk2.img,if=none,id=drive2,format=raw \
+		-device ide-hd,drive=drive2,bus=ide.1 \
 		$(if $(DISPLAY),,-nographic -serial mon:stdio)
 
 debug: os.img kernel.dump disk.img
@@ -135,6 +143,20 @@ disk.img:
 	sudo mount -o loop,rw,sync,X-mount.mkdir $@ $$MNT; \
 	sudo chown -R 1000:1000 $$MNT; \
 	cp -r ./* $$MNT/
+
+disk2.img:
+	qemu-img create -f raw $@ 32M
+	mkfs.ext2 $@
+
+	@set -e; \
+	MNT=../disk; \
+	trap 'mountpoint -q $$MNT && sudo umount $$MNT' EXIT; \
+	if mountpoint -q $$MNT; then \
+		sudo umount $$MNT; \
+	fi; \
+	sudo mount -o loop,rw,sync,X-mount.mkdir $@ $$MNT; \
+	sudo chown -R 1000:1000 $$MNT; \
+	cp -r lib/* $$MNT/
 
 %.o: %.S
 	$(AS) $(AFLAGS) $< -o $@

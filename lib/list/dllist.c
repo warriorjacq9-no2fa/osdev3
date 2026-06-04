@@ -1,58 +1,78 @@
 #include <kernel/dllist.h>
 #include <kernel/kmalloc.h>
 
-void dllist_init(dllist_t* list) {
-    list = kmalloc(sizeof(dllist_t), 0);
-    list->next = NULL;
-    list->prev = NULL;
+dllist_t* dllist_create() {
+    dllist_t* list = kmalloc(sizeof(dllist_t), 0);
+    if(list) {
+        list->next = NULL;
+        list->prev = NULL;
+    }
+    return list;
 }
 
-dllist_t* dllist_append(dllist_t* list, void* data) {
+void dllist_append(dllist_t* list, void* data) {
     dllist_t* entry = kmalloc(sizeof(dllist_t), 0);
     entry->data = data;
-    entry->next = list->next;
-    entry->prev = list;
-    if(list->next) list->next->prev = entry;
-    list->next = entry;
-    return entry;
+    entry->next = NULL;
+    dllist_t* ptr = list;
+    while(ptr->next) {
+        ptr = ptr->next;
+    }
+    entry->prev = ptr;
+    ptr->next = entry;
 }
 
 dllist_t* dllist_prepend(dllist_t* list, void* data) {
     dllist_t* entry = kmalloc(sizeof(dllist_t), 0);
     entry->data = data;
-    entry->next = list;
-    entry->prev = list->prev;
-    if(list->prev) list->prev->next = entry;
-    list->prev = entry;
+    entry->prev = NULL;
+    dllist_t* ptr = list;
+    while(ptr->prev) {
+        ptr = ptr->prev;
+    }
+    entry->next = ptr;
+    ptr->prev = entry;
     return entry;
 }
 
-dllist_t* dllist_remove(dllist_t* list, bool shouldFree) {
-    if(list->next)
-        list->next->prev = list->prev;
-    if(list->prev)
-        list->prev->next = list->next;
-    
-    dllist_t* ret;
-    if(list->next)
-        ret = list->next;
-    else if(list->prev)
-        ret = list->prev;
-    else ret = NULL;
+void dllist_remove(dllist_t* list, size_t idx, bool shouldFree) {
+    size_t cur = 0;
+    idx += 1; // Account for the root list element
+    dllist_t* ptr = list;
+    while(cur < idx && ptr) {
+        ptr = ptr->next;
+        cur++;
+    }
 
-    if(shouldFree) kfree(list->data);
-    kfree(list);
-    return ret;
+    ptr->prev->next = ptr->next;
+    ptr->next->prev = ptr->prev;
+    if(shouldFree) kfree(ptr->data);
+    kfree(ptr);
 }
 
-dllist_t* dllist_prev(dllist_t* list) {
-    return list->prev;
+void* dllist_get(dllist_t* list, size_t idx) {
+    size_t cur = 0;
+    idx += 1; // Account for the root list element
+    dllist_t* ptr = list;
+    while(cur < idx && ptr) {
+        ptr = ptr->next;
+        cur++;
+    }
+    if(ptr) return ptr->data;
+    else return NULL;
 }
 
-dllist_t* dllist_next(dllist_t* list) {
-    return list->next;
-}
-
-void* dllist_get(dllist_t* list) {
-    return list->data;
+size_t dllist_len(dllist_t* list) {
+    size_t len = 0;
+    dllist_t* cur = list->next;
+    while(cur) {
+        len++;
+        cur = cur->next;
+    }
+    cur = list->prev;
+    while(cur) {
+        len++;
+        cur = cur->prev;
+    }
+    return len;
 }

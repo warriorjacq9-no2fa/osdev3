@@ -19,5 +19,6 @@ size_t strcspn(const char* s, const char* reject);
 int strcmp(const char* s1, const char* s2);
 char* strtok_r(char* s, const char* delim, char** save_ptr);
 char* strdup(char* s);
+char* strndup(char* s, size_t len);
 
 #endif

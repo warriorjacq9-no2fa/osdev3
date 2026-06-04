@@ -34,7 +34,7 @@ void kmain() {
     kthread_create(&efd, kevent_proc, NULL, PRIV_KERNEL);
     kprintf(LOG_INFO, "kernel", "Hello world!\r\n");
 
-    int res = ext2_init(ata_read, 0);
+    int res = ext2_init(0);
 
     if(res < 0) {
         kprintf(LOG_WARN, "kernel", "ext2_init returned %d\r\n", res);

@@ -8,3 +8,9 @@ char* strdup(char* s) {
     if(d == NULL) return NULL;
     return (char*)memcpy(d, s, len);
 }
+
+char* strndup(char* s, size_t len) {
+    char* d = kmalloc(len, 0);
+    if(d == NULL) return NULL;
+    return (char*)memcpy(d, s, len);
+}
