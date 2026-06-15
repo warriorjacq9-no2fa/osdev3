@@ -49,9 +49,6 @@
 #define S_ISFIFO(n) (n & 0x1000)
 
 
-// int bdev_read_t(void* buf, size_t seek, size_t len)
-typedef int (*bdev_read_t)(void*, size_t, size_t);
-
 typedef struct vnode vnode_t;
 typedef struct stat stat_t;
 typedef struct vnode_ops vops_t;
